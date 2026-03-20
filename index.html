@@ -28,6 +28,20 @@
         .blur-bg { backdrop-filter: blur(15px); background: rgba(0,0,0,0.9); }
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #d4af37; border-radius: 10px; }
+        
+        /* Styl dla pływającego przycisku KUPNA */
+        .buy-popup {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            animation: slideUp 0.5s ease-out, pulse-gold 1.5s infinite;
+        }
+        @keyframes slideUp {
+            from { bottom: -100px; opacity: 0; }
+            to { bottom: 40px; opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -36,7 +50,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- KONFIGURACJA FIREBASE (Dla Admina) ---
+        // --- KONFIGURACJA FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyDSW1Rbw-gDY_JQ9YTrdb3lrJCZf0aAWyw",
             authDomain: "fame-30.firebaseapp.com",
@@ -50,6 +64,7 @@
         const db = firebase.database();
 
         const WEBHOOK_URL = "https://discord.com/api/webhooks/1482735762553176105/vCpLZNRhwP8bUYget_Aqf5e7ll6bBqvHTw3-HzvNeGyP";
+        const DISCORD_LINK = "https://discord.com/channels/1460736543869239336/1460737498358612269"; // TU WPISZ SWÓJ LINK DO DISCORDA
         const DEADLINE = new Date('2026-03-21T19:30:00'); 
         
         const soundUrls = {
@@ -87,6 +102,7 @@
             const [officialResults, setOfficialResults] = useState({});
             const [userBet, setUserBet] = useState(JSON.parse(localStorage.getItem('fame_bet_30') || null));
             const [secretClicks, setSecretClicks] = useState(0);
+            const [showBuyBtn, setShowBuyBtn] = useState(false);
 
             const audioRefs = useRef({
                 click: new Audio(soundUrls.click),
@@ -95,7 +111,6 @@
             });
 
             useEffect(() => {
-                // Pobieranie wyników na żywo z Firebase
                 const resRef = db.ref('official_results');
                 resRef.on('value', snap => setOfficialResults(snap.val() || {}));
 
@@ -108,8 +123,17 @@
                         s: Math.max(0, Math.floor((diff / 1000) % 60))
                     });
                 }, 1000);
-                return () => { clearInterval(timer); resRef.off(); };
-            }, []);
+
+                // Logika pojawiania się przycisku KUP RESTREAM co 15 sekund
+                const buyTimer = setInterval(() => {
+                    if (!showTerms) {
+                        setShowBuyBtn(true);
+                        setTimeout(() => setShowBuyBtn(false), 8000); // Znika po 8 sekundach
+                    }
+                }, 15000);
+
+                return () => { clearInterval(timer); clearInterval(buyTimer); resRef.off(); };
+            }, [showTerms]);
 
             const playSound = (name) => {
                 const sound = audioRefs.current[name];
@@ -205,6 +229,13 @@
 
             return (
                 <div className="min-h-screen pb-20">
+                    {/* PRZYCISK KUP RESTREAM */}
+                    {showBuyBtn && (
+                        <a href={DISCORD_LINK} target="_blank" onClick={() => setShowBuyBtn(false)} className="buy-popup block px-8 py-5 btn-gold rounded-full text-lg fame-font italic shadow-[0_0_30px_rgba(212,175,55,0.6)] uppercase tracking-tighter border-2 border-white">
+                            🚀 KUP RESTREAM GALI
+                        </a>
+                    )}
+
                     {/* Toast Notification */}
                     <div className={`fixed top-5 right-5 z-[300] p-4 rounded-xl card-bg border-l-4 border-l-yellow-500 shadow-2xl flex items-center gap-4 ${toast.show ? 'toast-show' : 'toast-hide'}`}>
                         <div className="bg-yellow-500/20 p-2 rounded-full font-bold text-yellow-500">✓</div>
