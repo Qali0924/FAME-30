@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FAME 30 | OBSTAWIANIE</title>
+    <title>OBSTAWIANIE | RESTREAM</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -12,19 +12,20 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow-x: hidden; }
         .fame-font { font-family: 'Orbitron', sans-serif; }
         .gold-text { color: #d4af37; }
         .btn-gold { background: linear-gradient(45deg, #d4af37, #f4cf57); color: black; font-weight: 900; }
         .card-bg { background: #0f0f0f; border: 1px solid #1a1a1a; }
+        .timer-box { background: rgba(212, 175, 55, 0.05); border: 1px solid rgba(212, 175, 55, 0.2); }
         .ticket-gradient { background: linear-gradient(135deg, #1a1a1a 0%, #050505 100%); border: 2px solid #d4af37; }
         .toast-show { transform: translateX(0); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .toast-hide { transform: translateX(150%); transition: transform 0.5s ease-in; }
         @keyframes pulse-gold { 0%, 100% { box-shadow: 0 0 5px rgba(212,175,55,0.2); } 50% { box-shadow: 0 0 20px rgba(212,175,55,0.4); } }
         .animate-gold { animation: pulse-gold 3s infinite; }
-        .blur-bg { backdrop-filter: blur(20px); background: rgba(0,0,0,0.85); }
+        .blur-bg { backdrop-filter: blur(15px); background: rgba(0,0,0,0.9); }
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #d4af37; border-radius: 10px; }
     </style>
@@ -35,7 +36,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // KONFIGURACJA
+        // --- KONFIGURACJA FIREBASE (Dla Admina) ---
         const firebaseConfig = {
             apiKey: "AIzaSyDSW1Rbw-gDY_JQ9YTrdb3lrJCZf0aAWyw",
             authDomain: "fame-30.firebaseapp.com",
@@ -45,28 +46,33 @@
             messagingSenderId: "447768289074",
             appId: "1:447768289074:web:49ce781e967ab86417812b"
         };
-
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
         const WEBHOOK_URL = "https://discord.com/api/webhooks/1482735762553176105/vCpLZNRhwP8bUYget_Aqf5e7ll6bBqvHTw3-HzvNeGyP";
-        const DEADLINE = new Date('2026-03-21T19:30:00'); // Start pierwszej walki
+        const DEADLINE = new Date('2026-03-21T19:30:00'); 
+        
+        const soundUrls = {
+            click: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
+            success: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
+            notify: 'https://assets.mixkit.co/active_storage/sfx/2357/2357-preview.mp3'
+        };
 
         const FIGHTS = [
-            { id: 1, p1: 'Monika Weitz', o1: '1.15', p2: 'Wiktoria Zagacka', o2: '4.70', cat: 'BOKS' },
-            { id: 2, p1: 'Krystian Jakiel', o1: '3.20', p2: 'Piotr Szewc', o2: '1.30', cat: 'BOKS' },
-            { id: 3, p1: 'Oskar Wierzejski', o1: '1.17', p2: 'Klaudiusz Mazanowski', o2: '4.40', cat: 'MMA' },
-            { id: 4, p1: 'Michał Pasternak', o1: '1.10', p2: 'Michał Królik', o2: '5.85', cat: 'BOKS' },
-            { id: 5, p1: 'Nikola Biela', o1: '1.75', p2: 'Żaneta Koloska', o2: '1.95', cat: 'K-1' },
-            { id: 6, p1: 'Łukasz Pawłowski', o1: '1.17', p2: 'Nikodem Sławik', o2: '4.40', cat: 'K-1 / MMA' },
-            { id: 7, p1: 'Robert Karaś', o1: '1.13', p2: 'Kasper Gutkowski', o2: '5.10', cat: 'BOKS / K-1' },
-            { id: 8, p1: 'Krzyżanowski/Bazyluk', o1: '4.00', p2: 'Stępień/Fares', o2: '1.20', cat: '2vs2 MMA/BOKS' },
-            { id: 9, p1: 'Marta Linkiewicz', o1: '1.25', p2: 'Izabela Badurek', o2: '3.50', cat: 'K-1' },
-            { id: 10, p1: 'Alan Kwieciński', o1: '1.22', p2: 'Michał Skowronek', o2: '3.80', cat: 'K-1' },
-            { id: 11, p1: 'Maksymilian Wiewiórka', o1: '3.50', p2: 'Alberto Simao', o2: '1.25', cat: 'MMA' },
-            { id: 12, p1: 'Denis Załęcki', o1: '1.15', p2: 'Bartosz Szachta', o2: '4.70', cat: 'K-1' },
-            { id: 13, p1: 'Jakub Flas', o1: '1.13', p2: 'Akop Szostak', o2: '5.00', cat: 'BOKS' },
-            { id: 14, p1: 'Makhmud Muradov', o1: '1.23', p2: 'Denis Labryga', o2: '3.70', cat: 'MAIN EVENT K-1' }
+            { id: 1, p1: 'Monika Weitz', p2: 'Wiktoria Zagacka', cat: 'BOKS' },
+            { id: 2, p1: 'Krystian Jakiel', p2: 'Piotr Szewc', cat: 'BOKS' },
+            { id: 3, p1: 'Oskar Wierzejski', p2: 'Klaudiusz Mazanowski', cat: 'MMA' },
+            { id: 4, p1: 'Michał Pasternak', p2: 'Michał Królik', cat: 'BOKS' },
+            { id: 5, p1: 'Nikola Biela', p2: 'Żaneta Koloska', cat: 'K-1' },
+            { id: 6, p1: 'Łukasz Pawłowski', p2: 'Nikodem Sławik', cat: 'K-1 / MMA' },
+            { id: 7, p1: 'Robert Karaś', p2: 'Kasper Gutkowski', cat: 'BOKS / K-1' },
+            { id: 8, p1: 'Krzyżanowski/Bazyluk', p2: 'Stępień/Fares', cat: '2vs2 MMA/BOKS' },
+            { id: 9, p1: 'Marta Linkiewicz', p2: 'Izabela Badurek', cat: 'K-1' },
+            { id: 10, p1: 'Alan Kwieciński', p2: 'Michał Skowronek', cat: 'K-1' },
+            { id: 11, p1: 'Maksymilian Wiewiórka', p2: 'Alberto Simao', cat: 'MMA' },
+            { id: 12, p1: 'Denis Załęcki', p2: 'Bartosz Szachta', cat: 'K-1' },
+            { id: 13, p1: 'Jakub Flas', p2: 'Akop Szostak', cat: 'BOKS' },
+            { id: 14, p1: 'Makhmud Muradov', p2: 'Denis Labryga', cat: 'MAIN EVENT K-1' }
         ];
 
         function App() {
@@ -82,9 +88,17 @@
             const [userBet, setUserBet] = useState(JSON.parse(localStorage.getItem('fame_bet_30') || null));
             const [secretClicks, setSecretClicks] = useState(0);
 
+            const audioRefs = useRef({
+                click: new Audio(soundUrls.click),
+                success: new Audio(soundUrls.success),
+                notify: new Audio(soundUrls.notify)
+            });
+
             useEffect(() => {
+                // Pobieranie wyników na żywo z Firebase
                 const resRef = db.ref('official_results');
                 resRef.on('value', snap => setOfficialResults(snap.val() || {}));
+
                 const timer = setInterval(() => {
                     const diff = DEADLINE - new Date();
                     setTimeLeft({
@@ -97,19 +111,41 @@
                 return () => { clearInterval(timer); resRef.off(); };
             }, []);
 
-            const showNotify = (m) => { setToast({show:true, msg:m}); setTimeout(()=>setToast({show:false, msg:''}), 3000); };
+            const playSound = (name) => {
+                const sound = audioRefs.current[name];
+                if (sound) { sound.currentTime = 0; sound.volume = 0.5; sound.play().catch(() => {}); }
+            };
+
+            const unlockAudio = () => {
+                Object.values(audioRefs.current).forEach(s => { s.play().then(()=>s.pause()).catch(()=>{}); });
+                setShowTerms(false);
+                showNotify(userBet ? "Witaj ponownie! Kupon aktywny." : "Powodzenia w typowaniu!");
+            };
+
+            const showNotify = (msg) => {
+                playSound('notify');
+                setToast({ show: true, msg });
+                setTimeout(() => setToast({ show: false, msg: '' }), 4000);
+            };
+
+            const handlePick = (fId, fighter) => {
+                if (userBet) return;
+                playSound('click');
+                setPicks(prev => ({ ...prev, [fId]: fighter }));
+            };
 
             const submitBets = async (e) => {
                 e.preventDefault();
-                if (Object.keys(picks).length < FIGHTS.length) return alert("Musisz obstawić WSZYSTKIE walki!");
+                if (Object.keys(picks).length < FIGHTS.length) return alert("Obstaw wszystkie walki!");
                 setStatus('loading');
                 try {
                     await fetch(WEBHOOK_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
+                            username: "FAME 30 | SYSTEM",
                             embeds: [{
-                                title: `🔥 NOWY KUPON: ${nick}`,
+                                title: `🎯 NOWY KUPON: ${nick}`,
                                 color: 15844367,
                                 fields: FIGHTS.map(f => ({ name: f.cat, value: `🥊 **${picks[f.id]}**`, inline: true })),
                                 timestamp: new Date().toISOString()
@@ -120,35 +156,36 @@
                     localStorage.setItem('fame_bet_30', JSON.stringify(betData));
                     setUserBet(betData);
                     setStatus('success');
+                    playSound('success');
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                 } catch (e) { alert("Błąd połączenia!"); setStatus('idle'); }
             };
 
             const winStatus = (() => {
                 if (!userBet) return null;
-                const settledCount = Object.keys(officialResults).length;
-                if (settledCount < FIGHTS.length) return 'WAITING';
+                const settled = Object.keys(officialResults).length;
+                if (settled < FIGHTS.length) return 'WAITING';
                 return FIGHTS.every(f => officialResults[f.id] === userBet.picks[f.id]) ? 'WIN' : 'LOSE';
             })();
 
             if (view === 'admin') {
                 return (
-                    <div className="min-h-screen p-6 max-w-xl mx-auto py-20">
+                    <div className="min-h-screen p-8 max-w-xl mx-auto py-20">
                         {!isLogged ? (
-                            <div className="card-bg p-10 rounded-[30px] border border-yellow-500/20 shadow-2xl">
-                                <h2 className="fame-font gold-text text-xl mb-8 text-center uppercase tracking-widest italic">Panel Admina</h2>
-                                <input id="l" className="w-full bg-zinc-900/50 border border-zinc-800 p-4 rounded-xl mb-4 text-white outline-none" placeholder="Login" />
-                                <input id="p" type="password" title="pass" className="w-full bg-zinc-900/50 border border-zinc-800 p-4 rounded-xl mb-6 text-white outline-none" placeholder="Hasło" />
-                                <button onClick={() => {if(document.getElementById('l').value==='qali09' && document.getElementById('p').value==='QaLi090909.') setIsLogged(true); else alert('Błąd!');}} className="w-full btn-gold py-4 rounded-xl uppercase">Zaloguj</button>
-                                <button onClick={()=>setView('home')} className="w-full mt-4 text-zinc-600 text-[10px] uppercase font-bold tracking-widest italic">Anuluj</button>
+                            <div className="card-bg p-8 rounded-3xl border border-yellow-500/20">
+                                <h2 className="fame-font gold-text text-xl mb-6 text-center uppercase italic">ADMIN LOGIN</h2>
+                                <input id="l" className="w-full bg-zinc-900 p-4 rounded-xl mb-4 border border-zinc-800 text-white outline-none" placeholder="Login" />
+                                <input id="p" type="password" title="pass" className="w-full bg-zinc-900 p-4 rounded-xl mb-6 border border-zinc-800 text-white outline-none" placeholder="Hasło" />
+                                <button onClick={() => {if(document.getElementById('l').value==='qali09' && document.getElementById('p').value==='QaLi090909.') setIsLogged(true); else alert('Błąd!');}} className="w-full btn-gold py-4 rounded-xl uppercase">Wejdź</button>
+                                <button onClick={()=>setView('home')} className="w-full mt-4 text-zinc-600 text-[10px] uppercase italic underline">Anuluj</button>
                             </div>
                         ) : (
                             <div className="space-y-6">
-                                <h2 className="fame-font gold-text text-2xl uppercase italic tracking-tighter text-center">Zatwierdź Wyniki Gali</h2>
-                                <div className="card-bg p-4 rounded-[30px] space-y-3 max-h-[60vh] overflow-y-auto custom-scroll border border-white/5">
+                                <h2 className="fame-font gold-text text-xl uppercase italic">Zatwierdź Wyniki</h2>
+                                <div className="card-bg p-4 rounded-3xl space-y-3 max-h-[60vh] overflow-y-auto custom-scroll border border-white/5">
                                     {FIGHTS.map(f => (
                                         <div key={f.id} className="p-4 bg-black/40 rounded-2xl border border-zinc-900">
-                                            <p className="text-[9px] text-zinc-500 font-black mb-3 uppercase tracking-widest">{f.cat}</p>
+                                            <p className="text-[9px] text-zinc-500 font-bold mb-3 uppercase">{f.cat}</p>
                                             <div className="grid grid-cols-2 gap-2">
                                                 {[f.p1, f.p2].map(p => (
                                                     <button key={p} onClick={() => db.ref('official_results/' + f.id).set(p)}
@@ -159,7 +196,7 @@
                                     ))}
                                 </div>
                                 <button onClick={() => { if(confirm("Czy na pewno wyczyścić wyniki?")) db.ref('official_results').remove(); }} className="w-full py-4 text-red-500 text-[10px] font-bold border border-red-500/20 rounded-xl uppercase hover:bg-red-500/5">Resetuj wszystkie wyniki</button>
-                                <button onClick={() => setView('home')} className="w-full btn-gold py-5 rounded-2xl uppercase shadow-xl">Wróć do strony głównej</button>
+                                <button onClick={() => setView('home')} className="w-full btn-gold py-5 rounded-2xl uppercase shadow-xl">Wróć</button>
                             </div>
                         )}
                     </div>
@@ -167,123 +204,100 @@
             }
 
             return (
-                <div className="min-h-screen">
+                <div className="min-h-screen pb-20">
                     {/* Toast Notification */}
-                    <div className={`fixed top-10 right-10 z-[300] p-5 rounded-2xl card-bg border-l-4 border-l-yellow-500 shadow-2xl flex items-center gap-4 ${toast.show ? 'toast-show' : 'toast-hide'}`}>
-                        <div className="bg-yellow-500 text-black w-8 h-8 rounded-full flex items-center justify-center font-black">!</div>
-                        <div><p className="text-[10px] text-zinc-500 font-black uppercase">Komunikat</p><p className="text-xs font-bold text-white">{toast.msg}</p></div>
+                    <div className={`fixed top-5 right-5 z-[300] p-4 rounded-xl card-bg border-l-4 border-l-yellow-500 shadow-2xl flex items-center gap-4 ${toast.show ? 'toast-show' : 'toast-hide'}`}>
+                        <div className="bg-yellow-500/20 p-2 rounded-full font-bold text-yellow-500">✓</div>
+                        <div><p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest italic">SYSTEM</p><p className="text-xs font-bold text-white">{toast.msg}</p></div>
                     </div>
 
                     {showTerms && (
-                        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 blur-bg">
-                            <div className="card-bg w-full max-w-md p-10 rounded-[45px] border border-yellow-500/30 text-center shadow-[0_0_100px_rgba(212,175,55,0.1)]">
-                                <h2 className="fame-font gold-text text-5xl mb-2 italic uppercase font-black tracking-tighter">FAME 30</h2>
-                                <p className="text-zinc-500 text-[10px] font-black tracking-[0.4em] uppercase mb-10 italic">Weryfikacja Zawodnika</p>
-                                <div className="text-zinc-400 text-[11px] text-left space-y-4 mb-10 italic bg-black/80 p-6 rounded-3xl border border-zinc-800/50">
-                                    <p className="font-black text-yellow-500 uppercase tracking-[0.2em] text-center border-b border-zinc-800 pb-2">Zasady Obstawiaka</p>
-                                    <p>1. Możesz wysłać <b>tylko jeden kupon</b> na to urządzenie.</p>
-                                    <p>2. Aby wygrać, musisz poprawnie wytypować wszystkie 14 walk.</p>
-                                    <p>3. Po zatwierdzeniu nie ma możliwości zmiany typów.</p>
+                        <div className="fixed inset-0 z-[500] flex items-center justify-center p-6 blur-bg">
+                            <div className="card-bg w-full max-w-md p-10 rounded-[40px] border border-yellow-500/20 text-center shadow-2xl animate-in zoom-in duration-300">
+                                <h2 className="fame-font gold-text text-4xl mb-2 italic uppercase">FAME 30</h2>
+                                <p className="text-zinc-500 text-[10px] font-black tracking-[0.4em] uppercase mb-8 italic">Weryfikacja Zawodnika</p>
+                                <div className="text-zinc-400 text-[11px] text-left space-y-4 mb-10 italic bg-black/50 p-6 rounded-2xl border border-zinc-800">
+                                    <p className="font-bold text-yellow-500 uppercase tracking-widest text-center mb-2 underline">ZASADY OBSTAWIANKI</p>
+                                    <p>• System pozwala na wysłanie <b>tylko jednego kuponu</b>.</p>
+                                    <p>• Aby wygrać, musisz trafić wszystkie 14 walk.</p>
+                                    <p>• Twoje typy zostaną zapisane na tym urządzeniu.</p>
                                 </div>
-                                <button onClick={() => { setShowTerms(false); showNotify(userBet ? "Witaj ponownie!" : "Powodzenia w typowaniu!"); }} 
-                                className="w-full btn-gold py-6 rounded-2xl uppercase tracking-[0.2em] text-xs animate-gold">WCHODZĘ DO GRY</button>
+                                <button onClick={unlockAudio} className="w-full btn-gold py-6 mt-4 rounded-2xl uppercase tracking-widest text-xs animate-gold">WCHODZĘ DO GRY</button>
                             </div>
                         </div>
                     )}
 
-                    <div className={`max-w-2xl mx-auto py-12 px-6 transition-all duration-700 ${showTerms ? 'blur-2xl' : 'blur-0'}`}>
+                    <div className={`max-w-2xl mx-auto py-12 px-6 transition-all duration-1000 ${showTerms ? 'blur-2xl scale-95' : 'blur-0 scale-100'}`}>
                         <header className="text-center mb-16 select-none relative">
-                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-yellow-500/10 rounded-full blur-[80px] -z-10"></div>
                             <h1 onClick={() => {const c=secretClicks+1; setSecretClicks(c); if(c===5) setView('admin');}} 
-                                className="fame-font text-8xl font-black italic gold-text mb-6 tracking-tighter drop-shadow-[0_10px_30px_rgba(212,175,55,0.3)] cursor-default">FAME 30</h1>
-                            
-                            <div className="flex justify-center gap-3">
-                                {[{v:timeLeft.d,l:'DNI'},{v:timeLeft.h,l:'GODZ'},{v:timeLeft.m,l:'MIN'},{v:timeLeft.s,l:'SEK'}].map(t=>(
-                                    <div key={t.l} className="bg-zinc-900/40 border border-zinc-800/50 w-16 py-3 rounded-2xl">
-                                        <div className="text-xl font-black fame-font italic text-white">{String(t.v).padStart(2,'0')}</div>
-                                        <div className="text-[8px] uppercase text-zinc-600 font-black tracking-widest">{t.l}</div>
+                                className="fame-font text-8xl font-black italic gold-text mb-4 tracking-tighter drop-shadow-[0_0_20px_rgba(212,175,55,0.4)] cursor-default active:scale-95 transition-transform">FAME 30</h1>
+                            <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto">
+                                {[{v:timeLeft.d,l:'Dni'},{v:timeLeft.h,l:'Godz'},{v:timeLeft.m,l:'Min'},{v:timeLeft.s,l:'Sek'}].map(t=>(
+                                    <div key={t.l} className="timer-box p-3 rounded-xl border border-zinc-800/50">
+                                        <div className="text-2xl font-black fame-font italic text-white">{t.v}</div>
+                                        <div className="text-[9px] uppercase text-zinc-500 font-black tracking-widest">{t.l}</div>
                                     </div>
                                 ))}
                             </div>
                         </header>
 
                         {userBet ? (
-                            <div className="space-y-8 animate-[fadeIn_1s_ease]">
+                            <div className="space-y-8 animate-in slide-in-from-bottom duration-700">
                                 <div className="text-center">
-                                    {winStatus === 'WAITING' && <div className="bg-yellow-500/5 border border-yellow-500/20 p-8 rounded-[40px]"><div className="w-10 h-10 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div><h2 className="fame-font gold-text text-xl uppercase italic tracking-widest">KUPON W GRZE...</h2><p className="text-[10px] text-zinc-500 mt-2 font-bold uppercase tracking-widest">Czekamy na oficjalne wyniki walk</p></div>}
-                                    {winStatus === 'WIN' && <div className="bg-green-500/10 border-2 border-green-500 p-8 rounded-[40px]"><h2 className="fame-font text-green-500 text-4xl italic uppercase font-black">WYGRAŁEŚ! 🏆</h2><p className="bg-green-500 text-black inline-block px-4 py-2 mt-4 rounded-lg font-black text-[10px] uppercase">Zrób screen i wyślij na Discord!</p></div>}
-                                    {winStatus === 'LOSE' && <div className="bg-red-500/5 border border-red-500/20 p-8 rounded-[40px]"><h2 className="fame-font text-red-500 text-2xl italic uppercase opacity-60">Kupon Przegrany</h2></div>}
+                                    {winStatus === 'WAITING' && <div className="bg-yellow-500/10 border border-yellow-500/30 p-8 rounded-3xl"><div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div><h2 className="fame-font gold-text text-2xl italic uppercase">Kupon w grze...</h2><p className="text-zinc-500 text-[10px] mt-2 font-bold uppercase tracking-widest">Czekamy na oficjalne wyniki walk.</p></div>}
+                                    {winStatus === 'WIN' && <div className="bg-green-500/20 border-2 border-green-500 p-8 rounded-3xl shadow-[0_0_40px_rgba(34,197,94,0.2)]"><h2 className="fame-font text-green-500 text-4xl italic uppercase mb-2">WYGRAŁEŚ! 🏆</h2><p className="bg-green-500 text-black inline-block px-4 py-2 rounded-lg font-black text-xs uppercase tracking-widest">ZGŁOŚ SIĘ PO NAGRODĘ!</p></div>}
+                                    {winStatus === 'LOSE' && <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-3xl"><h2 className="fame-font text-red-500 text-3xl italic uppercase opacity-60">Kupon Przegrany</h2></div>}
                                 </div>
 
-                                <div id="ticket" className="ticket-gradient p-10 rounded-[50px] border-2 border-yellow-500 shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
-                                    <div className="flex justify-between items-start mb-10 border-b border-zinc-800 pb-6">
-                                        <div>
-                                            <p className="text-zinc-600 text-[8px] font-black uppercase tracking-[0.3em] mb-1">POSIADACZ KUPONU</p>
-                                            <p className="text-2xl font-black fame-font text-white italic uppercase">{userBet.nick}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-zinc-600 text-[8px] font-black uppercase tracking-[0.3em] mb-1">STATUS</p>
-                                            <p className="text-sm font-black fame-font gold-text italic">ZWERYFIKOWANO</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 gap-2">
+                                <div id="ticket" className="ticket-gradient p-10 rounded-[50px] border-2 border-yellow-500 relative overflow-hidden shadow-2xl">
+                                    <div className="absolute top-0 right-0 p-6 opacity-5 fame-font text-6xl italic">F30</div>
+                                    <h2 className="fame-font gold-text text-xl mb-8 uppercase italic tracking-[0.3em] text-center">KUPON ZAPISANY</h2>
+                                    <p className="text-3xl font-black fame-font text-white mb-8 uppercase italic text-center underline decoration-yellow-500/30">{userBet.nick}</p>
+                                    <div className="space-y-3">
                                         {FIGHTS.map(f => {
                                             const res = officialResults[f.id];
                                             const isCorrect = res ? (res === userBet.picks[f.id]) : null;
                                             return (
-                                                <div key={f.id} className="flex justify-between items-center py-2 border-b border-white/5 italic">
-                                                    <span className="text-[9px] text-zinc-500 font-bold uppercase w-24 text-left">{f.cat}</span>
-                                                    <span className={`text-[10px] font-black uppercase tracking-tight flex-1 text-center ${isCorrect===true?'text-green-400':isCorrect===false?'text-red-500':'text-zinc-200'}`}>{userBet.picks[f.id]}</span>
-                                                    <span className="w-8 text-right">{isCorrect === true ? '✅' : isCorrect === false ? '❌' : '⏳'}</span>
+                                                <div key={f.id} className="flex justify-between border-b border-zinc-800/50 pb-2 px-4 italic">
+                                                    <span className="text-zinc-600 text-[10px] font-bold uppercase">{f.cat}</span>
+                                                    <span className={`text-[10px] font-black uppercase tracking-tighter ${isCorrect===true?'text-green-500':isCorrect===false?'text-red-500':'gold-text'}`}>{userBet.picks[f.id]}</span>
                                                 </div>
                                             );
                                         })}
                                     </div>
-                                    <div className="mt-10 pt-6 border-t border-zinc-800 flex justify-between items-center">
-                                        <div className="text-[7px] text-zinc-700 font-black tracking-[0.5em] uppercase">FAME 30 OFFICIAL SYSTEM</div>
-                                        <div className="text-[7px] text-zinc-700 font-black uppercase">{userBet.date}</div>
-                                    </div>
+                                    <div className="mt-10 text-[8px] text-zinc-600 font-black tracking-[0.8em] uppercase opacity-40 text-center">RESTREAM WERYFIKACJA</div>
                                 </div>
-
-                                <button onClick={() => html2canvas(document.getElementById('ticket'), {backgroundColor:'#050505', scale:2}).then(c => { const a = document.createElement('a'); a.download=`FAME30_${userBet.nick}.png`; a.href=c.toDataURL(); a.click(); })} 
-                                className="w-full btn-gold py-6 rounded-[25px] text-xs font-black uppercase shadow-2xl transition-transform active:scale-95">Pobierz Kupon jako PNG</button>
+                                <button onClick={() => html2canvas(document.getElementById('ticket'), {backgroundColor:'#050505'}).then(c => { const a = document.createElement('a'); a.download=`WYNIK_${userBet.nick}.png`; a.href=c.toDataURL(); a.click(); })} className="w-full btn-gold py-6 rounded-3xl text-sm font-black uppercase shadow-xl animate-gold">Pobierz Dowód (PNG)</button>
                             </div>
                         ) : (
                             <form onSubmit={submitBets} className="space-y-6">
-                                <div className="card-bg p-8 rounded-[35px] border border-zinc-800/50">
-                                    <label className="block text-zinc-600 text-[10px] font-black uppercase text-center mb-4 tracking-[0.2em] italic underline">Twój Nick z Discorda</label>
-                                    <input required className="w-full bg-black/60 border border-zinc-800 p-5 rounded-2xl text-center text-xl font-bold focus:border-yellow-500 transition-all outline-none uppercase text-white placeholder:text-zinc-800" placeholder="NICK#0000" value={nick} onChange={e=>setNick(e.target.value.toUpperCase())} />
+                                <div className="card-bg p-8 rounded-3xl border border-zinc-800/50 shadow-inner">
+                                    <label className="block text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] text-center mb-4 italic">Twój Nick Discord</label>
+                                    <input required className="w-full bg-black border border-zinc-800 p-5 rounded-2xl text-center text-xl font-bold focus:border-yellow-500 outline-none uppercase text-white tracking-widest transition-all" placeholder="NICK#0000" value={nick} onChange={e=>setNick(e.target.value.toUpperCase())} />
                                 </div>
 
                                 <div className="space-y-4">
                                     {FIGHTS.map(f => (
-                                        <div key={f.id} className="card-bg p-6 rounded-[35px] border border-white/5 hover:border-yellow-500/20 transition-all group">
-                                            <p className="text-center text-[9px] text-zinc-600 font-black mb-6 uppercase tracking-[0.5em] italic group-hover:text-yellow-500 transition-colors">{f.cat}</p>
+                                        <div key={f.id} className="card-bg p-6 rounded-3xl border border-zinc-800/30 hover:border-zinc-700 transition-colors group">
+                                            <p className="text-center text-[9px] text-zinc-500 font-bold mb-5 uppercase tracking-[0.4em] italic group-hover:text-yellow-500 transition-colors">{f.cat}</p>
                                             <div className="grid grid-cols-2 gap-4">
-                                                <button type="button" onClick={() => {setPicks(p=>({...p, [f.id]:f.p1})); showNotify(`Wybrałeś: ${f.p1}`);}} 
-                                                    className={`relative overflow-hidden py-6 rounded-2xl font-black text-[11px] transition-all border-2 ${picks[f.id]===f.p1?'btn-gold border-white scale-[1.03] shadow-lg shadow-yellow-500/10':'bg-zinc-900/50 border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}>
-                                                    <span className="relative z-10">{f.p1.toUpperCase()}</span>
-                                                    <span className="absolute top-1 right-2 text-[8px] opacity-30 italic">{f.o1}</span>
-                                                </button>
-                                                <button type="button" onClick={() => {setPicks(p=>({...p, [f.id]:f.p2})); showNotify(`Wybrałeś: ${f.p2}`);}} 
-                                                    className={`relative overflow-hidden py-6 rounded-2xl font-black text-[11px] transition-all border-2 ${picks[f.id]===f.p2?'btn-gold border-white scale-[1.03] shadow-lg shadow-yellow-500/10':'bg-zinc-900/50 border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}>
-                                                    <span className="relative z-10">{f.p2.toUpperCase()}</span>
-                                                    <span className="absolute top-1 right-2 text-[8px] opacity-30 italic">{f.o2}</span>
-                                                </button>
+                                                {[f.p1, f.p2].map(p => (
+                                                    <button key={p} type="button" onClick={() => handlePick(f.id, p)} 
+                                                        className={`py-6 rounded-2xl font-black text-xs transition-all border-2 ${picks[f.id]===p ? 'btn-gold border-white scale-[1.05] shadow-lg shadow-yellow-500/20' : 'bg-black border-zinc-900 text-zinc-700 hover:border-zinc-700'}`}>{p.toUpperCase()}</button>
+                                                ))}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
 
-                                <button type="submit" disabled={status==='loading'} className="w-full btn-gold py-8 rounded-[40px] text-2xl font-black italic uppercase animate-gold disabled:opacity-50 mt-10 shadow-[0_20px_40px_rgba(212,175,55,0.2)] transition-transform active:scale-95">
+                                <button type="submit" disabled={status==='loading'} className="w-full btn-gold py-8 rounded-[40px] text-2xl font-black italic shadow-2xl uppercase tracking-tighter animate-gold disabled:opacity-50 mt-10">
                                     {status === 'loading' ? 'WYSYŁANIE...' : 'ZATWIERDŹ KUPON'}
                                 </button>
                             </form>
                         )}
                         
-                        <footer className="mt-24 text-center">
-                            <p className="text-[9px] fame-font tracking-[1.5em] uppercase italic text-zinc-800">CLOUD AI RESTREAM SYSTEM</p>
+                        <footer className="mt-20 text-center opacity-20">
+                            <p className="text-[8px] fame-font tracking-[1em] uppercase select-none italic">RESTREAM © 2026</p>
                         </footer>
                     </div>
                 </div>
