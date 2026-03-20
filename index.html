@@ -25,7 +25,7 @@
         .toast-hide { transform: translateX(150%); transition: transform 0.5s ease-in; }
         @keyframes pulse-gold { 0%, 100% { box-shadow: 0 0 5px rgba(212,175,55,0.2); } 50% { box-shadow: 0 0 20px rgba(212,175,55,0.4); } }
         .animate-gold { animation: pulse-gold 3s infinite; }
-        .blur-bg { backdrop-filter: blur(25px); background: rgba(0,0,0,0.8); }
+        .blur-bg { backdrop-filter: blur(15px); background: rgba(0,0,0,0.9); }
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #d4af37; border-radius: 10px; }
     </style>
@@ -36,7 +36,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- TWOJA KONFIGURACJA FIREBASE ---
+        // --- KONFIGURACJA FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyDSW1Rbw-gDY_JQ9YTrdb3lrJCZf0aAWyw",
             authDomain: "fame-30.firebaseapp.com",
@@ -94,7 +94,9 @@
 
             useEffect(() => {
                 const resultsRef = db.ref('official_results');
-                resultsRef.on('value', (snap) => setOfficialResults(snap.val() || {}));
+                resultsRef.on('value', (snapshot) => {
+                    setOfficialResults(snapshot.val() || {});
+                });
 
                 const timer = setInterval(() => {
                     const diff = DEADLINE - new Date();
@@ -105,13 +107,20 @@
                         s: Math.max(0, Math.floor((diff / 1000) % 60))
                     });
                 }, 1000);
-
-                return () => { resultsRef.off(); clearInterval(timer); };
+                return () => { clearInterval(timer); resultsRef.off(); };
             }, []);
 
             const playSound = (name) => {
                 const sound = audioRefs.current[name];
-                if (sound) { sound.currentTime = 0; sound.volume = 0.3; sound.play().catch(() => {}); }
+                if (sound) { sound.currentTime = 0; sound.volume = 0.5; sound.play().catch(() => {}); }
+            };
+
+            const unlockAudio = () => {
+                Object.values(audioRefs.current).forEach(sound => {
+                    sound.play().then(() => { sound.pause(); sound.currentTime = 0; }).catch(() => {});
+                });
+                setShowTerms(false);
+                showNotify(userBet ? "Witaj ponownie! Twój kupon jest bezpieczny." : "Regulamin zaakceptowany");
             };
 
             const showNotify = (msg) => {
@@ -120,14 +129,18 @@
                 setTimeout(() => setToast({ show: false, msg: '' }), 4000);
             };
 
-            const unlockSystem = () => {
-                Object.values(audioRefs.current).forEach(s => { s.play().then(()=> {s.pause(); s.currentTime=0;}).catch(()=>{}); });
-                setShowTerms(false);
-                showNotify(userBet ? "Witaj ponownie, Zawodniku!" : "System weryfikacji aktywny");
+            const handleSecretClick = () => {
+                const newCount = secretClicks + 1;
+                setSecretClicks(newCount);
+                if (newCount === 5) {
+                    setSecretClicks(0);
+                    setView('admin');
+                    showNotify("Tryb Administratora");
+                }
             };
 
             const handlePick = (fId, fighter) => {
-                if (userBet) return;
+                if (status === 'success' || userBet) return;
                 playSound('click');
                 setPicks(prev => ({ ...prev, [fId]: fighter }));
             };
@@ -155,34 +168,35 @@
                     setUserBet(newBet);
                     setStatus('success');
                     playSound('success');
-                    confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                 } catch (err) { alert("Błąd połączenia!"); setStatus('idle'); }
             };
 
             const winStatus = (() => {
                 if (!userBet) return null;
-                const settledCount = Object.keys(officialResults).length;
-                if (settledCount < FIGHTS.length) return 'WAITING';
+                const settledFights = Object.keys(officialResults).length;
+                if (settledFights < FIGHTS.length) return 'WAITING';
                 return FIGHTS.every(f => officialResults[f.id] === userBet.picks[f.id]) ? 'WIN' : 'LOSE';
             })();
 
             if (view === 'admin') {
                 return (
-                    <div className="min-h-screen p-8 max-w-2xl mx-auto">
+                    <div className="min-h-screen p-8 max-w-2xl mx-auto animate-in fade-in duration-500">
                         {!isLogged ? (
-                            <div className="max-w-md mx-auto mt-20 card-bg p-8 rounded-3xl border border-yellow-500/20 shadow-2xl">
-                                <h2 className="fame-font gold-text text-xl mb-6 text-center uppercase italic">FIREBASE LOGIN</h2>
-                                <input id="l" className="w-full bg-zinc-900 p-4 rounded-xl mb-4 text-white outline-none border border-zinc-800" placeholder="Login" />
-                                <input id="p" type="password" title="password" className="w-full bg-zinc-900 p-4 rounded-xl mb-6 text-white outline-none border border-zinc-800" placeholder="Hasło" />
-                                <button onClick={() => { if(document.getElementById('l').value === 'qali09' && document.getElementById('p').value === 'QaLi090909.') { setIsLogged(true); playSound('success'); } }} className="w-full btn-gold py-4 rounded-xl uppercase font-black">Autoryzuj</button>
-                                <button onClick={() => setView('home')} className="w-full mt-4 text-[10px] text-zinc-600 uppercase underline">Anuluj</button>
+                            <div className="max-w-md mx-auto mt-20 card-bg p-8 rounded-3xl border border-yellow-500/20">
+                                <h2 className="fame-font gold-text text-xl mb-6 text-center uppercase tracking-widest italic">ADMIN LOGIN</h2>
+                                <input id="l" className="w-full bg-zinc-900 p-4 rounded-xl mb-4 border border-zinc-800 text-white outline-none" placeholder="Login" />
+                                <input id="p" type="password" title="password" className="w-full bg-zinc-900 p-4 rounded-xl mb-6 border border-zinc-800 text-white outline-none" placeholder="Hasło" />
+                                <button onClick={() => {
+                                    if(document.getElementById('l').value === 'qali09' && document.getElementById('p').value === 'QaLi090909.') {
+                                        playSound('success'); setIsLogged(true);
+                                    } else { alert('Brak dostępu!'); }
+                                }} className="w-full btn-gold py-4 rounded-xl uppercase">Wejdź</button>
+                                <button onClick={() => setView('home')} className="w-full mt-4 text-zinc-600 text-[10px] uppercase underline italic">Wróć</button>
                             </div>
                         ) : (
-                            <div className="space-y-6 animate-in fade-in duration-500">
-                                <div className="flex justify-between items-center">
-                                    <h2 className="fame-font gold-text text-xl uppercase italic">ZARZĄDZANIE LIVE</h2>
-                                    <button onClick={() => { if(confirm("Zresetować bazę?")) db.ref('official_results').remove(); }} className="text-[9px] text-red-500 border border-red-500/20 px-3 py-1 rounded">RESET BAZY</button>
-                                </div>
+                            <div className="space-y-6">
+                                <h2 className="fame-font gold-text text-xl uppercase italic">USTAL WYNIKI WALK</h2>
                                 <div className="card-bg p-6 rounded-3xl space-y-4 max-h-[60vh] overflow-y-auto custom-scroll">
                                     {FIGHTS.map(f => (
                                         <div key={f.id} className="pb-4 border-b border-zinc-800 last:border-0">
@@ -190,13 +204,14 @@
                                             <div className="grid grid-cols-2 gap-2">
                                                 {[f.p1, f.p2].map(p => (
                                                     <button key={p} onClick={() => { db.ref('official_results/' + f.id).set(p); playSound('click'); }}
-                                                    className={`py-3 rounded-lg text-[10px] font-black border transition-all ${officialResults[f.id] === p ? 'bg-yellow-500 text-black border-white' : 'bg-black border-zinc-800 text-zinc-500 hover:border-zinc-600'}`}>{p.toUpperCase()}</button>
+                                                    className={`py-2 rounded-lg text-[10px] font-black border transition-all ${officialResults[f.id] === p ? 'bg-yellow-500 text-black border-white' : 'bg-black border-zinc-800 text-zinc-500'}`}>{p.toUpperCase()}</button>
                                                 ))}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
-                                <button onClick={() => setView('home')} className="w-full btn-gold py-4 rounded-xl uppercase font-black">Wyjdź z Panelu</button>
+                                <button onClick={() => { if(confirm("Czy na pewno chcesz zresetować bazę wyników?")) db.ref('official_results').remove(); }} className="w-full py-4 text-red-500 text-[10px] font-bold uppercase border border-red-500/20 rounded-xl">Resetuj Wyniki</button>
+                                <button onClick={() => setView('home')} className="w-full btn-gold py-4 rounded-xl uppercase">Powrót do strony</button>
                             </div>
                         )}
                     </div>
@@ -205,30 +220,33 @@
 
             return (
                 <div className="min-h-screen pb-20">
-                    <div className={`fixed top-5 right-5 z-[100] p-4 rounded-xl card-bg border-l-4 border-l-yellow-500 shadow-2xl flex items-center gap-4 transition-all ${toast.show ? 'toast-show' : 'toast-hide'}`}>
-                        <div className="bg-yellow-500/20 p-2 rounded-full text-yellow-500 text-xs">✓</div>
-                        <p className="text-xs font-bold text-white pr-4">{toast.msg}</p>
+                    <div className={`fixed top-5 right-5 z-[100] p-4 rounded-xl card-bg border-l-4 border-l-yellow-500 shadow-2xl flex items-center gap-4 ${toast.show ? 'toast-show' : 'toast-hide'}`}>
+                        <div className="bg-yellow-500/20 p-2 rounded-full font-bold text-yellow-500">✓</div>
+                        <div className="pr-4">
+                            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">SYSTEM</p>
+                            <p className="text-xs font-bold text-white">{toast.msg}</p>
+                        </div>
                     </div>
 
                     {showTerms && (
                         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 blur-bg">
                             <div className="card-bg w-full max-w-md p-10 rounded-[40px] border border-yellow-500/20 text-center shadow-2xl animate-in zoom-in duration-300">
-                                <h2 className="fame-font gold-text text-5xl mb-2 italic uppercase">FAME 30</h2>
-                                <p className="text-zinc-500 text-[10px] font-black tracking-[0.4em] uppercase mb-10 italic">Weryfikacja Tożsamości</p>
-                                <div className="bg-black/50 p-6 rounded-2xl border border-zinc-800 text-left space-y-3 mb-10">
-                                    <p className="text-[11px] text-zinc-400 italic">• Jeden zawodnik = Jeden bilet.</p>
-                                    <p className="text-[11px] text-zinc-400 italic">• Typy są zapisywane w chmurze Firebase.</p>
-                                    <p className="text-[11px] text-zinc-400 italic">• Wyniki aktualizowane są w czasie rzeczywistym.</p>
+                                <h2 className="fame-font gold-text text-4xl mb-2 italic uppercase">FAME 30</h2>
+                                <p className="text-zinc-500 text-[10px] font-black tracking-[0.4em] uppercase mb-8 italic">Weryfikacja Zawodnika</p>
+                                <div className="text-zinc-400 text-[11px] text-left space-y-4 mb-10 italic bg-black/50 p-6 rounded-2xl border border-zinc-800">
+                                    <p className="font-bold text-yellow-500 uppercase tracking-widest text-center mb-2 underline">WAŻNA INFORMACJA</p>
+                                    <p>• System pozwala na wysłanie <b>tylko jednego kuponu</b>.</p>
+                                    <p>• Twoje typy zostaną zapisane na tym urządzeniu.</p>
+                                    <p>• Po wysłaniu będziesz mógł śledzić swoje wyniki w czasie rzeczywistym.</p>
                                 </div>
-                                <button onClick={unlockSystem} className="w-full btn-gold py-6 rounded-2xl uppercase tracking-widest text-xs animate-gold">WCHODZĘ DO GRY</button>
+                                <button onClick={unlockAudio} className="w-full btn-gold py-6 mt-4 rounded-2xl uppercase tracking-widest text-xs animate-gold">WCHODZĘ</button>
                             </div>
                         </div>
                     )}
 
-                    <div className={`max-w-2xl mx-auto py-12 px-6 transition-all duration-700 ${showTerms ? 'blur-2xl scale-95' : 'blur-0 scale-100'}`}>
+                    <div className={`max-w-2xl mx-auto py-12 px-6 transition-all duration-1000 ${showTerms ? 'blur-2xl scale-95' : 'blur-0 scale-100'}`}>
                         <header className="text-center mb-16 select-none">
-                            <h1 onClick={() => { setSecretClicks(s => s+1); if(secretClicks >= 4) { setView('admin'); setSecretClicks(0); } }} 
-                                className="fame-font text-8xl font-black italic gold-text mb-4 tracking-tighter drop-shadow-[0_0_15px_rgba(212,175,55,0.3)] cursor-default active:scale-95 transition-transform">FAME 30</h1>
+                            <h1 onClick={handleSecretClick} className="fame-font text-8xl font-black italic gold-text mb-4 tracking-tighter drop-shadow-[0_0_20px_rgba(212,175,55,0.4)] cursor-default active:scale-95 transition-transform">FAME 30</h1>
                             <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto">
                                 {[{v:timeLeft.d,l:'Dni'},{v:timeLeft.h,l:'Godz'},{v:timeLeft.m,l:'Min'},{v:timeLeft.s,l:'Sek'}].map(t=>(
                                     <div key={t.l} className="timer-box p-3 rounded-xl border border-zinc-800/50">
@@ -243,65 +261,65 @@
                             <div className="space-y-8 animate-in slide-in-from-bottom duration-700">
                                 <div className="text-center">
                                     {winStatus === 'WAITING' && (
-                                        <div className="bg-yellow-500/5 border border-yellow-500/20 p-8 rounded-3xl animate-gold">
-                                            <div className="w-8 h-8 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                                            <h2 className="fame-font gold-text text-xl italic uppercase">Kupon w grze...</h2>
-                                            <p className="text-zinc-600 text-[10px] mt-2 font-bold uppercase tracking-widest italic">Czekaj na rozliczenie wszystkich walk</p>
+                                        <div className="bg-yellow-500/10 border border-yellow-500/30 p-8 rounded-3xl">
+                                            <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                                            <h2 className="fame-font gold-text text-2xl italic uppercase">Czekaj na wyniki...</h2>
+                                            <p className="text-zinc-500 text-[10px] mt-2 font-bold uppercase tracking-widest italic">Twój kupon został zapisany w bazie danych.</p>
                                         </div>
                                     )}
                                     {winStatus === 'WIN' && (
                                         <div className="bg-green-500/20 border-2 border-green-500 p-8 rounded-3xl shadow-[0_0_40px_rgba(34,197,94,0.2)]">
                                             <h2 className="fame-font text-green-500 text-4xl italic uppercase mb-2">WYGRAŁEŚ! 🏆</h2>
-                                            <p className="text-white font-bold mb-4 uppercase text-[10px]">IDEALNE TYPOWANIE</p>
-                                            <div className="bg-green-500 text-black py-3 rounded-xl font-black text-[10px] uppercase tracking-widest">ZGŁOŚ SIĘ NA DISCORD!</div>
+                                            <p className="text-white font-bold mb-4 uppercase tracking-tighter">WSZYSTKIE TYPY SĄ PRAWIDŁOWE</p>
+                                            <div className="bg-green-500 text-black p-4 rounded-xl font-black text-xs uppercase tracking-widest">ZGŁOŚ SIĘ NA DISCORD PO NAGRODĘ!</div>
                                         </div>
                                     )}
                                     {winStatus === 'LOSE' && (
-                                        <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-3xl opacity-70">
-                                            <h2 className="fame-font text-red-500 text-3xl italic uppercase">PRZEGRANA</h2>
-                                            <p className="text-zinc-600 text-[10px] mt-2 uppercase">Nie wszystkie typy były trafne.</p>
+                                        <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-3xl">
+                                            <h2 className="fame-font text-red-500 text-3xl italic uppercase mb-2">PRZEGRAŁEŚ</h2>
+                                            <p className="text-zinc-500 text-xs italic uppercase">Niestety, nie wszystkie Twoje typy były trafne.</p>
                                         </div>
                                     )}
                                 </div>
 
-                                <div id="ticket" className="ticket-gradient p-10 rounded-[50px] border-2 border-yellow-500 relative overflow-hidden text-center">
-                                    <div className="absolute -top-4 -right-4 fame-font text-8xl italic text-white/5 pointer-events-none">F30</div>
-                                    <h2 className="fame-font gold-text text-xl mb-8 uppercase italic tracking-[0.3em]">BILET ZAWODNIKA</h2>
-                                    <p className="text-4xl font-black fame-font text-white mb-10 italic uppercase underline decoration-yellow-500/20">{userBet.nick}</p>
+                                <div id="ticket" className="ticket-gradient p-10 rounded-[50px] text-center border-2 border-yellow-500 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-6 opacity-5 fame-font text-6xl italic">F30</div>
+                                    <h2 className="fame-font gold-text text-xl mb-8 uppercase italic tracking-[0.3em]">KUPON ZAPISANY</h2>
+                                    <p className="text-3xl font-black fame-font text-white mb-8 uppercase italic underline decoration-yellow-500/30">{userBet.nick}</p>
                                     <div className="space-y-3">
                                         {FIGHTS.map(f => {
-                                            const isSettled = officialResults[f.id];
-                                            const isCorrect = isSettled === userBet.picks[f.id];
+                                            const res = officialResults[f.id];
+                                            const isCorrect = res ? (res === userBet.picks[f.id]) : null;
                                             return (
                                                 <div key={f.id} className="flex justify-between border-b border-zinc-800/50 pb-2 px-4 italic">
                                                     <span className="text-zinc-600 text-[10px] font-bold uppercase">{f.cat}</span>
-                                                    <span className={`text-[11px] font-black uppercase tracking-tighter ${!isSettled ? 'gold-text' : (isCorrect ? 'text-green-500' : 'text-red-500')}`}>
+                                                    <span className={`text-[10px] font-black uppercase tracking-tighter ${isCorrect === true ? 'text-green-500' : isCorrect === false ? 'text-red-500' : 'gold-text'}`}>
                                                         {userBet.picks[f.id]}
                                                     </span>
                                                 </div>
                                             );
                                         })}
                                     </div>
-                                    <div className="mt-12 text-[8px] text-zinc-600 font-black tracking-[0.8em] uppercase opacity-40 italic">RESTREAM LIVE VERIFICATION</div>
+                                    <div className="mt-10 text-[8px] text-zinc-600 font-black tracking-[0.8em] uppercase opacity-40">RESTREAM WERYFIKACJA</div>
                                 </div>
                                 <button onClick={() => html2canvas(document.getElementById('ticket')).then(c => { const a = document.createElement('a'); a.download=`WYNIK_${userBet.nick}.png`; a.href=c.toDataURL(); a.click(); })} 
-                                    className="w-full btn-gold py-6 rounded-3xl text-sm font-black uppercase shadow-xl hover:scale-[1.02] transition-transform">POBIERZ DOWÓD (PNG)</button>
+                                    className="w-full btn-gold py-6 rounded-3xl text-sm font-black uppercase shadow-xl animate-gold transition-transform hover:scale-[1.02]">Pobierz Dowód (PNG)</button>
                             </div>
                         ) : (
                             <form onSubmit={submitBets} className="space-y-6">
-                                <div className="card-bg p-8 rounded-3xl border border-zinc-800/50 shadow-2xl">
-                                    <label className="block text-zinc-500 text-[10px] font-black uppercase text-center mb-4 italic tracking-widest">Nick Discord (np. user#0000)</label>
+                                <div className="card-bg p-8 rounded-3xl border border-zinc-800/50 shadow-inner">
+                                    <label className="block text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] text-center mb-4 italic">Twój Nick Discord</label>
                                     <input required className="w-full bg-black border border-zinc-800 p-5 rounded-2xl text-center text-xl font-bold focus:border-yellow-500 outline-none uppercase text-white tracking-widest transition-all" 
-                                        placeholder="TWÓJ NICK" value={nick} onChange={e=>setNick(e.target.value.toUpperCase())} />
+                                        placeholder="NICK#0000" value={nick} onChange={e=>setNick(e.target.value.toUpperCase())} />
                                 </div>
                                 <div className="space-y-4">
                                     {FIGHTS.map(f => (
-                                        <div key={f.id} className="card-bg p-6 rounded-3xl border border-zinc-800/30 hover:border-zinc-700 transition-colors shadow-lg">
+                                        <div key={f.id} className="card-bg p-6 rounded-3xl border border-zinc-800/30 hover:border-zinc-700 transition-colors">
                                             <p className="text-center text-[9px] text-zinc-500 font-bold mb-5 uppercase tracking-[0.4em] italic">{f.cat}</p>
                                             <div className="grid grid-cols-2 gap-4">
                                                 {[f.p1, f.p2].map(p => (
                                                     <button key={p} type="button" onClick={() => handlePick(f.id, p)} 
-                                                        className={`py-6 rounded-2xl font-black text-xs transition-all border-2 ${picks[f.id] === p ? 'btn-gold border-white scale-[1.05] shadow-lg shadow-yellow-500/20' : 'bg-black border-zinc-900 text-zinc-700 hover:border-zinc-800'}`}>
+                                                        className={`py-6 rounded-2xl font-black text-xs transition-all border-2 ${picks[f.id] === p ? 'btn-gold border-white scale-[1.05] shadow-lg shadow-yellow-500/20' : 'bg-black border-zinc-900 text-zinc-700 hover:border-zinc-700'}`}>
                                                         {p.toUpperCase()}
                                                     </button>
                                                 ))}
@@ -315,7 +333,7 @@
                             </form>
                         )}
                         <footer className="mt-20 text-center opacity-20">
-                            <p className="text-[8px] fame-font tracking-[1.5em] uppercase italic select-none">RESTREAM LIVE DATABASE © 2026</p>
+                            <p className="text-[8px] fame-font tracking-[1em] uppercase select-none italic">RESTREAM © 2026</p>
                         </footer>
                     </div>
                 </div>
