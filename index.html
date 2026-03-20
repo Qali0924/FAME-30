@@ -1,1 +1,358 @@
 
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBSTAWIANIE | RESTREAM</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow-x: hidden; }
+        .fame-font { font-family: 'Orbitron', sans-serif; }
+        .gold-text { color: #d4af37; }
+        .btn-gold { background: linear-gradient(45deg, #d4af37, #f4cf57); color: black; font-weight: 900; }
+        .card-bg { background: #0f0f0f; border: 1px solid #1a1a1a; }
+        .timer-box { background: rgba(212, 175, 55, 0.05); border: 1px solid rgba(212, 175, 55, 0.2); }
+        .ticket-gradient { background: linear-gradient(135deg, #1a1a1a 0%, #050505 100%); border: 2px solid #d4af37; }
+        .toast-show { transform: translateX(0); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .toast-hide { transform: translateX(150%); transition: transform 0.5s ease-in; }
+        @keyframes pulse-gold { 0%, 100% { box-shadow: 0 0 5px rgba(212,175,55,0.2); } 50% { box-shadow: 0 0 20px rgba(212,175,55,0.4); } }
+        .animate-gold { animation: pulse-gold 3s infinite; }
+        .blur-bg { backdrop-filter: blur(15px); background: rgba(0,0,0,0.9); }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #d4af37; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const WEBHOOK_URL = "https://discord.com/api/webhooks/1482735762553176105/vCpLZNRhwP8bUYget_Aqf5e7ll6bBqvHTw3-HzvNeGyP";
+        const DEADLINE = new Date('2026-03-21T20:00:00');
+        
+        const soundUrls = {
+            click: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
+            success: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
+            notify: 'https://assets.mixkit.co/active_storage/sfx/2357/2357-preview.mp3'
+        };
+
+        const FIGHTS = [
+            { id: 1, p1: 'Nikita Biela', p2: 'Żanetka Koloska', cat: 'K-1' },
+            { id: 2, p1: 'Wampir Pasternak', p2: 'Matrix Królik', cat: 'BOKS' },
+            { id: 3, p1: 'Cameraboy Pawłowski', p2: 'Nikoś Sławik', cat: 'MIXED (K-1/MMA)' },
+            { id: 4, p1: 'Scarface Bomba', p2: 'Alan Kwieciński', cat: 'BOKS' },
+            { id: 5, p1: 'Oskar Wierzejski', p2: 'Mazan Mazanowski', cat: 'MMA' },
+            { id: 6, p1: 'Robert Karaś', p2: 'Klepsydra Gutkowski', cat: 'BOKS/K-1' },
+            { id: 7, p1: 'Mini Majk / Rado', p2: 'Niezniszczalny / Wieszjo', cat: 'DOUBLE FIGHT' },
+            { id: 8, p1: 'Linkimaster', p2: 'Izabela Badurek', cat: 'K-1' },
+            { id: 9, p1: 'Wiewiór', p2: 'Alberto Simao', cat: 'MMA' },
+            { id: 10, p1: 'Kubańczyk Flas', p2: 'Akop Szostak', cat: 'BOKS' },
+            { id: 11, p1: 'Makhmud Muradov', p2: 'Denis Labryga', cat: 'MAIN EVENT' }
+        ];
+
+        function App() {
+            const [view, setView] = useState('home');
+            const [nick, setNick] = useState('');
+            const [picks, setPicks] = useState({});
+            const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 });
+            const [status, setStatus] = useState('idle'); // idle, loading, success
+            const [showTerms, setShowTerms] = useState(true);
+            const [toast, setToast] = useState({ show: false, msg: '' });
+            const [isLogged, setIsLogged] = useState(false);
+            
+            // Stan wyników i kuponu
+            const [officialResults, setOfficialResults] = useState(JSON.parse(localStorage.getItem('official_results') || '{}'));
+            const [userBet, setUserBet] = useState(JSON.parse(localStorage.getItem('user_bet') || null));
+            const [secretClicks, setSecretClicks] = useState(0);
+
+            const audioRefs = useRef({
+                click: new Audio(soundUrls.click),
+                success: new Audio(soundUrls.success),
+                notify: new Audio(soundUrls.notify)
+            });
+
+            useEffect(() => {
+                const timer = setInterval(() => {
+                    const diff = DEADLINE - new Date();
+                    setTimeLeft({
+                        d: Math.max(0, Math.floor(diff / 86400000)),
+                        h: Math.max(0, Math.floor((diff / 3600000) % 24)),
+                        m: Math.max(0, Math.floor((diff / 60000) % 60)),
+                        s: Math.max(0, Math.floor((diff / 1000) % 60))
+                    });
+                }, 1000);
+                return () => clearInterval(timer);
+            }, []);
+
+            // Funkcja sprawdzająca status wygranej
+            const getWinStatus = () => {
+                if (!userBet) return null;
+                const totalFights = FIGHTS.length;
+                const settledFights = Object.keys(officialResults).length;
+                
+                if (settledFights < totalFights) return 'WAITING';
+
+                const isWinner = FIGHTS.every(f => officialResults[f.id] === userBet.picks[f.id]);
+                return isWinner ? 'WIN' : 'LOSE';
+            };
+
+            const playSound = (name) => {
+                const sound = audioRefs.current[name];
+                if (sound) {
+                    sound.currentTime = 0;
+                    sound.volume = 0.5;
+                    sound.play().catch(() => {});
+                }
+            };
+
+            const unlockAudio = () => {
+                Object.values(audioRefs.current).forEach(sound => {
+                    sound.play().then(() => { sound.pause(); sound.currentTime = 0; }).catch(() => {});
+                });
+                setShowTerms(false);
+                if (userBet) {
+                    showNotify("Witaj ponownie! Twój kupon jest bezpieczny.");
+                } else {
+                    showNotify("Regulamin zaakceptowany");
+                }
+            };
+
+            const showNotify = (msg) => {
+                playSound('notify');
+                setToast({ show: true, msg });
+                setTimeout(() => setToast({ show: false, msg: '' }), 4000);
+            };
+
+            const handleSecretClick = () => {
+                const newCount = secretClicks + 1;
+                setSecretClicks(newCount);
+                if (newCount === 5) {
+                    setSecretClicks(0);
+                    setView('admin');
+                    showNotify("Tryb Administratora");
+                }
+            };
+
+            const handlePick = (fId, fighter) => {
+                if (status === 'success' || userBet) return;
+                playSound('click');
+                setPicks(prev => ({ ...prev, [fId]: fighter }));
+            };
+
+            const submitBets = async (e) => {
+                e.preventDefault();
+                if (Object.keys(picks).length < FIGHTS.length) return alert("Obstaw wszystkie walki!");
+                setStatus('loading');
+                try {
+                    await fetch(WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            username: "FAME 30 | SYSTEM",
+                            embeds: [{
+                                title: `🎯 NOWY KUPON: ${nick}`,
+                                color: 15844367,
+                                fields: FIGHTS.map(f => ({ name: f.cat, value: `🥊 **${picks[f.id]}**`, inline: true })),
+                                timestamp: new Date().toISOString()
+                            }]
+                        })
+                    });
+                    const newBet = { nick, picks, date: new Date().toLocaleString() };
+                    localStorage.setItem('user_bet', JSON.stringify(newBet));
+                    setUserBet(newBet);
+                    setStatus('success');
+                    playSound('success');
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                } catch (err) { alert("Błąd połączenia!"); setStatus('idle'); }
+            };
+
+            if (view === 'admin') {
+                return (
+                    <div className="min-h-screen p-8 max-w-2xl mx-auto animate-in fade-in duration-500">
+                        {!isLogged ? (
+                            <div className="max-w-md mx-auto mt-20 card-bg p-8 rounded-3xl border border-yellow-500/20">
+                                <h2 className="fame-font gold-text text-xl mb-6 text-center uppercase tracking-widest italic">ADMIN LOGIN</h2>
+                                <input id="l" className="w-full bg-zinc-900 p-4 rounded-xl mb-4 border border-zinc-800 text-white outline-none" placeholder="Login" />
+                                <input id="p" type="password" title="password" className="w-full bg-zinc-900 p-4 rounded-xl mb-6 border border-zinc-800 text-white outline-none" placeholder="Hasło" />
+                                <button onClick={() => {
+                                    if(document.getElementById('l').value === 'qali09' && document.getElementById('p').value === 'QaLi090909.') {
+                                        playSound('success');
+                                        setIsLogged(true);
+                                    } else { alert('Brak dostępu!'); }
+                                }} className="w-full btn-gold py-4 rounded-xl uppercase">Wejdź</button>
+                                <button onClick={() => setView('home')} className="w-full mt-4 text-zinc-600 text-[10px] uppercase underline italic">Wróć</button>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                <h2 className="fame-font gold-text text-xl uppercase italic">USTAL WYNIKI WALK</h2>
+                                <div className="card-bg p-6 rounded-3xl space-y-4">
+                                    {FIGHTS.map(f => (
+                                        <div key={f.id} className="pb-4 border-b border-zinc-800 last:border-0">
+                                            <p className="text-[10px] text-zinc-500 font-bold mb-2 uppercase">{f.cat}</p>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {[f.p1, f.p2].map(p => (
+                                                    <button key={p} onClick={() => { 
+                                                        const newRes = {...officialResults, [f.id]: p};
+                                                        setOfficialResults(newRes);
+                                                        localStorage.setItem('official_results', JSON.stringify(newRes));
+                                                        playSound('click');
+                                                    }}
+                                                    className={`py-2 rounded-lg text-[10px] font-black border transition-all ${officialResults[f.id] === p ? 'bg-yellow-500 text-black border-white' : 'bg-black border-zinc-800 text-zinc-500'}`}>{p.toUpperCase()}</button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button onClick={() => {
+                                    if(confirm("Czy na pewno chcesz zresetować wszystkie wyniki?")) {
+                                        setOfficialResults({});
+                                        localStorage.removeItem('official_results');
+                                    }
+                                }} className="w-full py-4 text-red-500 text-[10px] font-bold uppercase border border-red-500/20 rounded-xl">Resetuj Wyniki</button>
+                                <button onClick={() => setView('home')} className="w-full btn-gold py-4 rounded-xl uppercase">Powrót do strony</button>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
+            const winStatus = getWinStatus();
+
+            return (
+                <div className="min-h-screen pb-20">
+                    <div className={`fixed top-5 right-5 z-[100] p-4 rounded-xl card-bg border-l-4 border-l-yellow-500 shadow-2xl flex items-center gap-4 ${toast.show ? 'toast-show' : 'toast-hide'}`}>
+                        <div className="bg-yellow-500/20 p-2 rounded-full font-bold text-yellow-500">✓</div>
+                        <div className="pr-4">
+                            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">SYSTEM</p>
+                            <p className="text-xs font-bold text-white">{toast.msg}</p>
+                        </div>
+                    </div>
+
+                    {showTerms && (
+                        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 blur-bg">
+                            <div className="card-bg w-full max-w-md p-10 rounded-[40px] border border-yellow-500/20 text-center shadow-2xl animate-in zoom-in duration-300">
+                                <h2 className="fame-font gold-text text-4xl mb-2 italic uppercase">FAME 30</h2>
+                                <p className="text-zinc-500 text-[10px] font-black tracking-[0.4em] uppercase mb-8 italic">Weryfikacja Zawodnika</p>
+                                <div className="text-zinc-400 text-[11px] text-left space-y-4 mb-10 italic bg-black/50 p-6 rounded-2xl border border-zinc-800">
+                                    <p className="font-bold text-yellow-500 uppercase tracking-widest text-center mb-2 underline">WAŻNA INFORMACJA</p>
+                                    <p>• System pozwala na wysłanie <b>tylko jednego kuponu</b>.</p>
+                                    <p>• Twoje typy zostaną zapisane na tym urządzeniu.</p>
+                                    <p>• Po wysłaniu będziesz mógł śledzić swoje wyniki w czasie rzeczywistym.</p>
+                                </div>
+                                <button onClick={unlockAudio} className="w-full btn-gold py-6 mt-4 rounded-2xl uppercase tracking-widest text-xs animate-gold">WCHODZĘ</button>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className={`max-w-2xl mx-auto py-12 px-6 transition-all duration-1000 ${showTerms ? 'blur-2xl scale-95' : 'blur-0 scale-100'}`}>
+                        <header className="text-center mb-16 select-none">
+                            <h1 onClick={handleSecretClick} className="fame-font text-8xl font-black italic gold-text mb-4 tracking-tighter drop-shadow-[0_0_20px_rgba(212,175,55,0.4)] cursor-default active:scale-95 transition-transform">FAME 30</h1>
+                            <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto">
+                                {[{v:timeLeft.d,l:'Dni'},{v:timeLeft.h,l:'Godz'},{v:timeLeft.m,l:'Min'},{v:timeLeft.s,l:'Sek'}].map(t=>(
+                                    <div key={t.l} className="timer-box p-3 rounded-xl border border-zinc-800/50">
+                                        <div className="text-2xl font-black fame-font italic text-white">{t.v}</div>
+                                        <div className="text-[9px] uppercase text-zinc-500 font-black tracking-widest">{t.l}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </header>
+
+                        {userBet ? (
+                            <div className="space-y-8 animate-in slide-in-from-bottom duration-700">
+                                {/* SEKCJA STATUSU */}
+                                <div className="text-center">
+                                    {winStatus === 'WAITING' && (
+                                        <div className="bg-yellow-500/10 border border-yellow-500/30 p-8 rounded-3xl">
+                                            <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                                            <h2 className="fame-font gold-text text-2xl italic uppercase">Czekaj na wyniki...</h2>
+                                            <p className="text-zinc-500 text-[10px] mt-2 font-bold uppercase tracking-widest italic">Twój kupon został zapisany w bazie danych.</p>
+                                        </div>
+                                    )}
+
+                                    {winStatus === 'WIN' && (
+                                        <div className="bg-green-500/20 border-2 border-green-500 p-8 rounded-3xl shadow-[0_0_40px_rgba(34,197,94,0.2)]">
+                                            <h2 className="fame-font text-green-500 text-4xl italic uppercase mb-2">WYGRAŁEŚ! 🏆</h2>
+                                            <p className="text-white font-bold mb-4 uppercase tracking-tighter">WSZYSTKIE TYPY SĄ PRAWIDŁOWE</p>
+                                            <div className="bg-green-500 text-black p-4 rounded-xl font-black text-xs uppercase tracking-widest">
+                                                ZGŁOŚ SIĘ NA DISCORD PO NAGRODĘ!
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {winStatus === 'LOSE' && (
+                                        <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-3xl">
+                                            <h2 className="fame-font text-red-500 text-3xl italic uppercase mb-2">PRZEGRAŁEŚ</h2>
+                                            <p className="text-zinc-500 text-xs italic uppercase">Niestety, nie wszystkie Twoje typy były trafne.</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* BILET */}
+                                <div id="ticket" className="ticket-gradient p-10 rounded-[50px] text-center border-2 border-yellow-500 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-6 opacity-5 fame-font text-6xl italic">F30</div>
+                                    <h2 className="fame-font gold-text text-xl mb-8 uppercase italic tracking-[0.3em]">KUPON ZAPISANY</h2>
+                                    <p className="text-3xl font-black fame-font text-white mb-8 uppercase italic underline decoration-yellow-500/30">{userBet.nick}</p>
+                                    <div className="space-y-3">
+                                        {FIGHTS.map(f => {
+                                            const isCorrect = officialResults[f.id] ? (officialResults[f.id] === userBet.picks[f.id]) : null;
+                                            return (
+                                                <div key={f.id} className="flex justify-between border-b border-zinc-800/50 pb-2 px-4 italic">
+                                                    <span className="text-zinc-600 text-[10px] font-bold uppercase">{f.cat}</span>
+                                                    <span className={`text-[10px] font-black uppercase tracking-tighter ${
+                                                        isCorrect === true ? 'text-green-500' : 
+                                                        isCorrect === false ? 'text-red-500' : 'gold-text'
+                                                    }`}>
+                                                        {userBet.picks[f.id]}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="mt-10 text-[8px] text-zinc-600 font-black tracking-[0.8em] uppercase opacity-40">RESTREAM WERYFIKACJA</div>
+                                </div>
+                                <button onClick={() => html2canvas(document.getElementById('ticket')).then(c => { const a = document.createElement('a'); a.download=`WYNIK_${userBet.nick}.png`; a.href=c.toDataURL(); a.click(); })} className="w-full btn-gold py-6 rounded-3xl text-sm font-black uppercase shadow-xl animate-gold">Pobierz Dowód (PNG)</button>
+                            </div>
+                        ) : (
+                            <form onSubmit={submitBets} className="space-y-6">
+                                <div className="card-bg p-8 rounded-3xl border border-zinc-800/50 shadow-inner">
+                                    <label className="block text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] text-center mb-4 italic">Twój Nick Discord</label>
+                                    <input required className="w-full bg-black border border-zinc-800 p-5 rounded-2xl text-center text-xl font-bold focus:border-yellow-500 outline-none uppercase text-white tracking-widest transition-all" placeholder="NICK#0000" value={nick} onChange={e=>setNick(e.target.value)} />
+                                </div>
+                                <div className="space-y-4">
+                                    {FIGHTS.map(f => (
+                                        <div key={f.id} className="card-bg p-6 rounded-3xl border border-zinc-800/30 hover:border-zinc-700 transition-colors">
+                                            <p className="text-center text-[9px] text-zinc-500 font-bold mb-5 uppercase tracking-[0.4em] italic">{f.cat}</p>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                {[f.p1, f.p2].map(p => (
+                                                    <button key={p} type="button" onClick={() => handlePick(f.id, p)} className={`py-6 rounded-2xl font-black text-xs transition-all border-2 ${picks[f.id] === p ? 'btn-gold border-white scale-[1.05] shadow-lg shadow-yellow-500/20' : 'bg-black border-zinc-900 text-zinc-700 hover:border-zinc-700'}`}>{p.toUpperCase()}</button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button type="submit" disabled={status==='loading'} className="w-full btn-gold py-8 rounded-[40px] text-2xl font-black italic shadow-2xl uppercase tracking-tighter animate-gold disabled:opacity-50">
+                                    {status === 'loading' ? 'WYSYŁANIE...' : 'ZATWIERDŹ KUPON'}
+                                </button>
+                            </form>
+                        )}
+                        <footer className="mt-20 text-center opacity-20">
+                            <p className="text-[8px] fame-font tracking-[1em] uppercase select-none italic">RESTREAM © 2026</p>
+                        </footer>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
