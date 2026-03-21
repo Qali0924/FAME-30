@@ -155,6 +155,61 @@
             animation: case-spin 0.2s infinite;
         }
 
+        /* FUT KARTY CSS */
+        .fut-card {
+            aspect-ratio: 2.5 / 3.5;
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background-size: cover;
+            background-position: center;
+        }
+        .fut-card:hover {
+            transform: translateY(-10px) scale(1.05);
+            z-index: 10;
+        }
+        .fut-gradient-overlay {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 60%;
+            background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.8) 40%, rgba(0,0,0,0) 100%);
+            z-index: 1;
+        }
+        .fut-content {
+            position: relative;
+            z-index: 2;
+            padding: 10px;
+            text-align: center;
+        }
+        /* Rzadkości Kart */
+        .rarity-BRONZE { border: 2px solid #8B4513; box-shadow: 0 0 10px rgba(139, 69, 19, 0.4); }
+        .rarity-SILVER { border: 2px solid #C0C0C0; box-shadow: 0 0 15px rgba(192, 192, 192, 0.5); }
+        .rarity-GOLD { border: 3px solid #FFD700; box-shadow: 0 0 20px rgba(255, 215, 0, 0.6); }
+        .rarity-LEGEND { 
+            border: 4px solid #ff0000; 
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.8), inset 0 0 20px rgba(255, 0, 0, 0.5); 
+            animation: pulse-legend 2s infinite;
+        }
+        @keyframes pulse-legend {
+            0%, 100% { box-shadow: 0 0 30px rgba(255, 0, 0, 0.8), inset 0 0 20px rgba(255, 0, 0, 0.5); border-color: #ff0000; }
+            50% { box-shadow: 0 0 50px rgba(255, 0, 255, 1), inset 0 0 40px rgba(255, 0, 255, 0.8); border-color: #ff00ff; }
+        }
+
+        .pack-shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both infinite;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+
     </style>
 
 </head>
@@ -214,38 +269,46 @@
         };
 
 
-
+        // DODANO ID ZDJĘĆ DO KODU (p1Id = obrazek 1.png, p2Id = obrazek 2.png)
         const FIGHTS = [
 
-            { id: 1, p1: 'Monika Weitz', p2: 'Wiktoria Zagacka', cat: 'BOKS' },
+            { id: 1, p1: 'Monika Weitz', p1Id: 1, p2: 'Wiktoria Zagacka', p2Id: 2, cat: 'BOKS' },
 
-            { id: 2, p1: 'Krystian Jakiel', p2: 'Piotr Szewc', cat: 'BOKS' },
+            { id: 2, p1: 'Krystian Jakiel', p1Id: 3, p2: 'Piotr Szewc', p2Id: 4, cat: 'BOKS' },
 
-            { id: 3, p1: 'Oskar Wierzejski', p2: 'Klaudiusz Mazanowski', cat: 'MMA' },
+            { id: 3, p1: 'Oskar Wierzejski', p1Id: 5, p2: 'Klaudiusz Mazanowski', p2Id: 6, cat: 'MMA' },
 
-            { id: 4, p1: 'Michał Pasternak', p2: 'Michał Królik', cat: 'BOKS' },
+            { id: 4, p1: 'Michał Pasternak', p1Id: 7, p2: 'Michał Królik', p2Id: 8, cat: 'BOKS' },
 
-            { id: 5, p1: 'Nikola Biela', p2: 'Żaneta Koloska', cat: 'K-1' },
+            { id: 5, p1: 'Nikola Biela', p1Id: 9, p2: 'Żaneta Koloska', p2Id: 10, cat: 'K-1' },
 
-            { id: 6, p1: 'Łukasz Pawłowski', p2: 'Nikodem Sławik', cat: 'K-1 / MMA' },
+            { id: 6, p1: 'Łukasz Pawłowski', p1Id: 11, p2: 'Nikodem Sławik', p2Id: 12, cat: 'K-1 / MMA' },
 
-            { id: 7, p1: 'Robert Karaś', p2: 'Kasper Gutkowski', cat: 'BOKS / K-1' },
+            { id: 7, p1: 'Robert Karaś', p1Id: 13, p2: 'Kasper Gutkowski', p2Id: 14, cat: 'BOKS / K-1' },
 
-            { id: 8, p1: 'Krzyżanowski/Bazyluk', p2: 'Stępień/Fares', cat: '2vs2 MMA/BOKS' },
+            { id: 8, p1: 'Krzyżanowski/Bazyluk', p1Id: 15, p2: 'Stępień/Fares', p2Id: 16, cat: '2vs2 MMA/BOKS' },
 
-            { id: 9, p1: 'Marta Linkiewicz', p2: 'Izabela Badurek', cat: 'K-1' },
+            { id: 9, p1: 'Marta Linkiewicz', p1Id: 17, p2: 'Izabela Badurek', p2Id: 18, cat: 'K-1' },
 
-            { id: 10, p1: 'Alan Kwieciński', p2: 'Michał Skowronek', cat: 'K-1' },
+            { id: 10, p1: 'Alan Kwieciński', p1Id: 19, p2: 'Michał Skowronek', p2Id: 20, cat: 'K-1' },
 
-            { id: 11, p1: 'Maksymilian Wiewiórka', p2: 'Alberto Simao', cat: 'MMA' },
+            { id: 11, p1: 'Maksymilian Wiewiórka', p1Id: 21, p2: 'Alberto Simao', p2Id: 22, cat: 'MMA' },
 
-            { id: 12, p1: 'Denis Załęcki', p2: 'Bartosz Szachta', cat: 'K-1' },
+            { id: 12, p1: 'Denis Załęcki', p1Id: 23, p2: 'Bartosz Szachta', p2Id: 24, cat: 'K-1' },
 
-            { id: 13, p1: 'Jakub Flas', p2: 'Akop Szostak', cat: 'BOKS' },
+            { id: 13, p1: 'Jakub Flas', p1Id: 25, p2: 'Akop Szostak', p2Id: 26, cat: 'BOKS' },
 
-            { id: 14, p1: 'Makhmud Muradov', p2: 'Denis Labryga', cat: 'MAIN EVENT K-1' }
+            { id: 14, p1: 'Makhmud Muradov', p1Id: 27, p2: 'Denis Labryga', p2Id: 28, cat: 'MAIN EVENT K-1' }
 
         ];
+
+
+        // Lista wszystkich zawodników do paczek FUT
+        const ALL_FIGHTERS = [];
+        FIGHTS.forEach(f => {
+            ALL_FIGHTERS.push({ name: f.p1, imgId: f.p1Id });
+            ALL_FIGHTERS.push({ name: f.p2, imgId: f.p2Id });
+        });
 
 
 
@@ -283,13 +346,17 @@
 
             const [isBettingLocked, setIsBettingLocked] = useState(false);
 
+            // ZAKŁADKI: ticket | store | cases | fut
             const [currentTab, setCurrentTab] = useState('ticket'); 
             const [isSpinning, setIsSpinning] = useState(false);
             const [spinResult, setSpinResult] = useState(null);
 
-            // STANY DO NADAWANIA FC PRZEZ ADMINA
             const [adminSelectedUser, setAdminSelectedUser] = useState('');
             const [adminFcAmount, setAdminFcAmount] = useState('');
+
+            // STANY DLA FUT
+            const [isOpeningPack, setIsOpeningPack] = useState(false);
+            const [pulledCard, setPulledCard] = useState(null);
 
 
 
@@ -436,7 +503,7 @@
             };
 
 
-            // FUNKCJA ADMINA: DODAWANIE FC
+
             const handleAdminAddFC = async () => {
                 if (!adminSelectedUser || !adminFcAmount) return alert('Wybierz gracza i wpisz kwotę!');
                 const amount = parseInt(adminFcAmount);
@@ -545,6 +612,7 @@
 
 
 
+            // PORTFEL
             const userCurrentBalance = useMemo(() => {
                 if (!userBet) return 1000;
                 let bal = 1000;
@@ -567,6 +635,15 @@
 
                 return bal;
             }, [userBet, officialResults, allBets]);
+
+            const userCardsCollection = useMemo(() => {
+                if (!userBet) return [];
+                const userDbObj = allBets.find(b => b.nick === userBet.nick);
+                if (userDbObj && userDbObj.cards) {
+                    return Object.values(userDbObj.cards).reverse(); // Najnowsze na górze
+                }
+                return [];
+            }, [userBet, allBets]);
 
             const winStatus = (() => {
                 if (!userBet) return null;
@@ -629,9 +706,8 @@
             };
 
             const handleBuyStoreItem = async (itemName, cost) => {
-                if (userCurrentBalance < cost) {
-                    return showNotify("Masz za mało Famecoinów!");
-                }
+                if (userCurrentBalance < cost) return showNotify("Masz za mało Famecoinów!");
+                
                 if (confirm(`Czy na pewno chcesz kupić: ${itemName} za ${cost} FC?`)) {
                     await modifyDatabaseWallet(-cost);
                     playSound('success');
@@ -648,52 +724,53 @@
                 }
             };
 
-            const openCase = async (caseName, cost, drops) => {
-                if (isSpinning) return;
-                if (userCurrentBalance < cost) {
-                    return showNotify("Masz za mało Famecoinów!");
-                }
 
-                setSpinResult(null);
-                setIsSpinning(true);
+            // LOGIKA FUT - OTWIERANIE PACZEK
+            const openFutPack = async () => {
+                const cost = 500;
+                if (isOpeningPack) return;
+                if (userCurrentBalance < cost) return showNotify("Masz za mało Famecoinów na paczkę!");
+
+                setIsOpeningPack(true);
+                setPulledCard(null);
                 playSound('click');
 
+                // Pobieramy kasę
                 await modifyDatabaseWallet(-cost);
 
+                // SYMULACJA OTWIERANIA
                 setTimeout(async () => {
-                    const rand = Math.random();
-                    let wonAmount = 0;
-                    let cumProb = 0;
-                    
-                    for (const drop of drops) {
-                        cumProb += drop.chance;
-                        if (rand <= cumProb) {
-                            wonAmount = drop.amount;
-                            break;
-                        }
+                    // Losowanie rzadkości
+                    const randRarity = Math.random();
+                    let rarity = 'BRONZE';
+                    if (randRarity > 0.95) rarity = 'LEGEND';
+                    else if (randRarity > 0.80) rarity = 'GOLD';
+                    else if (randRarity > 0.50) rarity = 'SILVER';
+
+                    // Losowanie zawodnika
+                    const randomFighter = ALL_FIGHTERS[Math.floor(Math.random() * ALL_FIGHTERS.length)];
+
+                    const newCard = {
+                        name: randomFighter.name,
+                        imgId: randomFighter.imgId,
+                        rarity: rarity,
+                        date: new Date().toISOString()
+                    };
+
+                    // Zapis do Firebase
+                    const userDbObj = allBets.find(b => b.nick === userBet.nick);
+                    if (userDbObj && userDbObj.id) {
+                        await db.ref(`wszystkie_kupony/${userDbObj.id}/cards`).push(newCard);
                     }
 
-                    if (wonAmount > 0) {
-                        await modifyDatabaseWallet(wonAmount);
-                        playSound('success');
-                        if (wonAmount >= cost * 2) {
-                            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-                            
-                            if(wonAmount >= 1000) {
-                                fetch(WEBHOOK_URL, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ content: `🎰 **JACKPOT!** Gracz **${userBet.nick}** wylosował z kasyna aż **${wonAmount} FC**!`})
-                                });
-                            }
-                        }
-                    } else {
-                        playSound('click'); 
+                    playSound('success');
+                    if(rarity === 'LEGEND' || rarity === 'GOLD') {
+                        confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });
                     }
 
-                    setSpinResult(`Znalazłeś: ${wonAmount} FC`);
-                    setIsSpinning(false);
-                }, 3000); 
+                    setPulledCard(newCard);
+                    setIsOpeningPack(false);
+                }, 2500); // 2.5 sekundy trzęsienia paczki
             };
 
 
@@ -795,7 +872,6 @@
                                     </div>
                                 </div>
 
-                                {/* NOWA SEKCJA: BANK CENTRALNY (NADAWANIE FC) */}
                                 <div className="card-bg p-6 rounded-3xl border border-zinc-800 shadow-xl">
                                     <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-widest mb-4">Bank Centralny (Dodaj/Odbierz FC)</h3>
                                     <div className="space-y-4">
@@ -930,9 +1006,7 @@
                                     
                                     <p>• Wybieraj zawodników i decyduj o stawce za pomocą suwaka.</p>
 
-                                    <p>• Zbieraj Famecoiny z wygranych i <b>wymieniaj na nagrody w Sklepie!</b></p>
-
-                                    <p>• W przerwach między walkami otwieraj <b>Skrzynki z nagrodami</b>.</p>
+                                    <p>• Kupuj <b>Paczki Kart (FUT)</b> i buduj swój klaser legend!</p>
 
                                 </div>
 
@@ -978,13 +1052,14 @@
 
                             <div className="animate-in slide-in-from-bottom duration-700">
 
-                                <div className="flex justify-center gap-6 mb-8 border-b border-zinc-800/50 pb-4 uppercase tracking-widest text-xs font-black fame-font italic">
+                                <div className="flex justify-center flex-wrap gap-4 md:gap-6 mb-8 border-b border-zinc-800/50 pb-4 uppercase tracking-widest text-xs font-black fame-font italic">
                                     <button onClick={() => {playSound('click'); setCurrentTab('ticket');}} className={`nav-tab px-4 py-2 ${currentTab === 'ticket' ? 'active' : 'text-zinc-500 hover:text-white'}`}>Mój Kupon</button>
+                                    <button onClick={() => {playSound('click'); setCurrentTab('fut');}} className={`nav-tab px-4 py-2 flex items-center gap-2 ${currentTab === 'fut' ? 'active' : 'text-zinc-500 hover:text-white'}`}>🃏 KARTY</button>
                                     <button onClick={() => {playSound('click'); setCurrentTab('store');}} className={`nav-tab px-4 py-2 flex items-center gap-2 ${currentTab === 'store' ? 'active' : 'text-zinc-500 hover:text-white'}`}>🛒 Sklep</button>
-                                    <button onClick={() => {playSound('click'); setCurrentTab('cases');}} className={`nav-tab px-4 py-2 flex items-center gap-2 ${currentTab === 'cases' ? 'active' : 'text-zinc-500 hover:text-white'}`}>🎰 Kasyno</button>
                                 </div>
 
 
+                                {/* KUPON */}
                                 {currentTab === 'ticket' && (
                                     <div className="space-y-8 animate-in fade-in">
                                         <div className="bg-yellow-500/10 border border-yellow-500/30 p-8 rounded-3xl flex flex-col items-center shadow-[0_0_30px_rgba(212,175,55,0.05)]">
@@ -1032,6 +1107,79 @@
                                 )}
 
 
+                                {/* KARTY FUT */}
+                                {currentTab === 'fut' && (
+                                    <div className="space-y-10 animate-in fade-in slide-in-from-left-10 duration-500">
+                                        
+                                        <div className="text-center mb-6">
+                                            <h2 className="text-4xl fame-font italic text-blue-500 mb-2 drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]">KARTY ZAWODNIKÓW</h2>
+                                            <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest">Kupuj paczki i zbieraj rzadkie legendy z FAME!</p>
+                                        </div>
+
+                                        {/* PACZKA DO KUPIENIA */}
+                                        <div className="flex flex-col items-center">
+                                            <div className="relative mb-6">
+                                                <div className={`w-40 h-56 bg-gradient-to-b from-blue-900 to-black border-4 border-blue-500 rounded-xl shadow-[0_0_30px_rgba(59,130,246,0.3)] flex flex-col items-center justify-center cursor-pointer ${isOpeningPack ? 'pack-shake' : 'hover:scale-105 transition-transform'}`} onClick={openFutPack}>
+                                                    <span className="text-4xl drop-shadow-lg mb-2">📦</span>
+                                                    <span className="fame-font text-white font-black italic text-xl">PACZKA</span>
+                                                    <span className="text-[10px] text-blue-300 font-bold uppercase mt-1">FAME 30</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <button onClick={openFutPack} disabled={isOpeningPack} className="bg-blue-600 border border-blue-400 text-white py-3 px-8 rounded-full text-xs font-black uppercase tracking-widest shadow-lg hover:bg-blue-500 disabled:opacity-50 transition-colors flex items-center gap-2">
+                                                {isOpeningPack ? 'OTWIERANIE...' : 'KUP PACZKĘ ZA 500'} <div className="f30-coin" style={{width:'14px',height:'14px',fontSize:'5px'}}>F30</div>
+                                            </button>
+                                        </div>
+
+                                        {/* WYNIK OTWIERANIA */}
+                                        {pulledCard && (
+                                            <div className="fixed inset-0 z-[600] flex flex-col items-center justify-center p-4 blur-bg animate-in zoom-in duration-300">
+                                                <h3 className="fame-font text-3xl text-white italic mb-6 uppercase drop-shadow-md">Trafiasz Kartę!</h3>
+                                                <div className={`fut-card rarity-${pulledCard.rarity} w-64 md:w-80 shadow-2xl relative mb-8`} style={{backgroundImage: `url(${pulledCard.imgId}.png)`}}>
+                                                    <div className="fut-gradient-overlay"></div>
+                                                    <div className="fut-content w-full absolute bottom-0 pb-4">
+                                                        <div className="fame-font text-center text-white text-2xl font-black italic uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">{pulledCard.name}</div>
+                                                        <div className={`text-[10px] font-bold uppercase tracking-widest text-center mt-1 ${pulledCard.rarity === 'BRONZE' ? 'text-orange-600' : pulledCard.rarity === 'SILVER' ? 'text-zinc-300' : pulledCard.rarity === 'GOLD' ? 'text-yellow-400' : 'text-red-500 animate-pulse'}`}>
+                                                            {pulledCard.rarity}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button onClick={() => setPulledCard(null)} className="text-zinc-400 text-sm uppercase font-bold hover:text-white transition-colors border border-zinc-700 px-6 py-2 rounded-full">Dalej</button>
+                                            </div>
+                                        )}
+
+                                        <hr className="border-zinc-800/50" />
+
+                                        {/* KLASER GRACZA */}
+                                        <div>
+                                            <h3 className="text-zinc-500 text-xs font-black uppercase tracking-[0.3em] mb-6 italic text-center">TWÓJ KLASER KART ({userCardsCollection.length})</h3>
+                                            
+                                            {userCardsCollection.length === 0 ? (
+                                                <div className="text-center bg-black/30 p-10 rounded-2xl border border-zinc-800/50">
+                                                    <p className="text-zinc-600 text-xs uppercase font-bold italic">Brak kart w klaserze. Kup pierwszą paczkę!</p>
+                                                </div>
+                                            ) : (
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                    {userCardsCollection.map((card, idx) => (
+                                                        <div key={idx} className={`fut-card rarity-${card.rarity}`} style={{backgroundImage: `url(${card.imgId}.png)`}}>
+                                                            <div className="fut-gradient-overlay"></div>
+                                                            <div className="fut-content pb-2">
+                                                                <div className="fame-font text-white text-sm md:text-md font-black italic uppercase drop-shadow-[0_2px_2px_rgba(0,0,0,1)] leading-tight">{card.name}</div>
+                                                                <div className={`text-[8px] font-bold uppercase tracking-widest mt-1 ${card.rarity === 'BRONZE' ? 'text-orange-600' : card.rarity === 'SILVER' ? 'text-zinc-300' : card.rarity === 'GOLD' ? 'text-yellow-400' : 'text-red-500'}`}>
+                                                                    {card.rarity}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                    </div>
+                                )}
+
+
+                                {/* SKLEP */}
                                 {currentTab === 'store' && (
                                     <div className="space-y-6 animate-in fade-in slide-in-from-right-10 duration-500">
                                         <div className="text-center mb-8">
@@ -1065,61 +1213,6 @@
                                                 <p className="text-zinc-500 text-[10px] mb-6">Zmień kolor swojego nicku na naszym serwerze Discord na dowolny jaki chcesz.</p>
                                                 <button onClick={() => handleBuyStoreItem('WŁASNY KOLOR NICKU', 1000)} className="w-full max-w-sm bg-blue-600/20 text-blue-400 border border-blue-500/50 py-4 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex justify-center items-center gap-2 mx-auto">
                                                     Kup za 1000 <div className="f30-coin" style={{width:'14px',height:'14px',fontSize:'5px'}}>F30</div>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-
-                                {currentTab === 'cases' && (
-                                    <div className="space-y-6 animate-in fade-in slide-in-from-left-10 duration-500">
-                                        <div className="text-center mb-10">
-                                            <h2 className="text-3xl fame-font italic text-red-500 mb-2 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]">KASYNO</h2>
-                                            <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest">Ryzykuj i otwieraj skrzynki. Przerwa w gali? Spróbuj szczęścia.</p>
-                                        </div>
-
-                                        {spinResult && (
-                                            <div className="bg-zinc-900 border border-white/10 p-6 rounded-2xl text-center mb-8 animate-in zoom-in">
-                                                <p className="text-white text-xl font-black uppercase tracking-widest fame-font italic">{spinResult}</p>
-                                            </div>
-                                        )}
-
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                            <div className={`card-bg p-6 rounded-3xl border-2 border-amber-700/50 flex flex-col items-center shadow-lg relative ${isSpinning ? 'opacity-50 pointer-events-none' : ''}`}>
-                                                <div className={`w-24 h-24 bg-gradient-to-br from-amber-800 to-amber-950 rounded-2xl mb-6 shadow-inner flex items-center justify-center border-4 border-amber-900 ${isSpinning ? 'spinning' : ''}`}>
-                                                    <span className="text-4xl">📦</span>
-                                                </div>
-                                                <h3 className="text-amber-600 font-black text-sm mb-1 uppercase tracking-widest">Skrzynka Biedaka</h3>
-                                                <p className="text-[9px] text-zinc-500 mb-6 text-center font-bold">Max Drop: 1000 FC</p>
-                                                <button onClick={() => openCase('Biedaka', 350, [{chance:0.5, amount:0}, {chance:0.3, amount:200}, {chance:0.15, amount:400}, {chance:0.05, amount:1000}])} 
-                                                        className="w-full bg-amber-900/40 border border-amber-700 text-amber-500 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-amber-700 hover:text-white transition-colors">
-                                                    Otwórz (350 FC)
-                                                </button>
-                                            </div>
-
-                                            <div className={`card-bg p-6 rounded-3xl border-2 border-zinc-400/50 flex flex-col items-center shadow-[0_0_20px_rgba(161,161,170,0.1)] relative ${isSpinning ? 'opacity-50 pointer-events-none' : ''}`}>
-                                                <div className={`w-24 h-24 bg-gradient-to-br from-zinc-400 to-zinc-700 rounded-2xl mb-6 shadow-inner flex items-center justify-center border-4 border-zinc-500 ${isSpinning ? 'spinning' : ''}`}>
-                                                    <span className="text-4xl">🧰</span>
-                                                </div>
-                                                <h3 className="text-zinc-300 font-black text-sm mb-1 uppercase tracking-widest">Skrzynka Gracza</h3>
-                                                <p className="text-[9px] text-zinc-500 mb-6 text-center font-bold">Max Drop: 2000 FC</p>
-                                                <button onClick={() => openCase('Gracza', 500, [{chance:0.5, amount:0}, {chance:0.25, amount:300}, {chance:0.20, amount:800}, {chance:0.05, amount:2000}])} 
-                                                        className="w-full bg-zinc-700/40 border border-zinc-500 text-zinc-300 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-zinc-500 hover:text-white transition-colors">
-                                                    Otwórz (500 FC)
-                                                </button>
-                                            </div>
-
-                                            <div className={`card-bg p-6 rounded-3xl border-2 border-yellow-500 flex flex-col items-center shadow-[0_0_30px_rgba(212,175,55,0.2)] relative ${isSpinning ? 'opacity-50 pointer-events-none' : ''}`}>
-                                                <div className="absolute -top-3 bg-red-600 text-white text-[8px] font-black px-4 py-1 rounded-full uppercase tracking-widest animate-pulse">JACKPOT</div>
-                                                <div className={`w-24 h-24 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl mb-6 mt-2 shadow-inner flex items-center justify-center border-4 border-yellow-300 ${isSpinning ? 'spinning' : ''}`}>
-                                                    <span className="text-4xl drop-shadow-md">👑</span>
-                                                </div>
-                                                <h3 className="text-yellow-500 font-black text-sm mb-1 uppercase tracking-widest drop-shadow-md">Złota Premium</h3>
-                                                <p className="text-[9px] text-yellow-500/50 mb-6 text-center font-bold">Max Drop: 5000 FC</p>
-                                                <button onClick={() => openCase('Złota Premium', 1000, [{chance:0.55, amount:0}, {chance:0.25, amount:500}, {chance:0.15, amount:2000}, {chance:0.05, amount:5000}])} 
-                                                        className="w-full btn-gold py-3 rounded-xl text-[10px] font-black uppercase shadow-lg hover:scale-105 transition-transform">
-                                                    Otwórz (1000 FC)
                                                 </button>
                                             </div>
                                         </div>
