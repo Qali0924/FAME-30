@@ -104,7 +104,6 @@
 
         }
 
-        /* FAMECOIN STYLES */
         .f30-coin {
             display: inline-flex; justify-content: center; align-items: center;
             border-radius: 50%;
@@ -253,7 +252,9 @@
 
             const [totalBets, setTotalBets] = useState(0);
 
-            const [allBets, setAllBets] = useState({});
+            const [allBets, setAllBets] = useState([]);
+
+            const [isBettingLocked, setIsBettingLocked] = useState(false);
 
 
 
@@ -280,9 +281,14 @@
                 const betsRef = db.ref('wszystkie_kupony');
 
                 betsRef.on('value', snap => {
-                    setTotalBets(snap.numChildren());
-                    setAllBets(snap.val() || {});
+                    const data = snap.val() || {};
+                    const parsedBets = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+                    setAllBets(parsedBets);
+                    setTotalBets(parsedBets.length);
                 });
+
+                const configRef = db.ref('config/betting_locked');
+                configRef.on('value', snap => setIsBettingLocked(snap.val() || false));
 
 
 
@@ -331,6 +337,7 @@
                     resRef.off(); 
 
                     betsRef.off();
+                    configRef.off();
 
                 };
 
@@ -372,12 +379,35 @@
 
 
 
-            // FAMECOIN LOGIC
+            // LOGOWANIE ADMINA
+            const handleAdminLogin = async () => {
+                const l = document.getElementById('l').value;
+                const p = document.getElementById('p').value;
+                try {
+                    const snap = await db.ref('admin_auth').once('value');
+                    const auth = snap.val();
+                    
+                    if (!auth) {
+                        if (l === 'qali09' && p === 'QaLi090909.') {
+                            await db.ref('admin_auth').set({ user: l, pass: btoa(p) });
+                            setIsLogged(true);
+                        } else alert('Błąd! Złe dane.');
+                    } else {
+                        if (auth.user === l && atob(auth.pass) === p) setIsLogged(true);
+                        else alert('Błąd logowania! Niepoprawne hasło.');
+                    }
+                } catch(e) {
+                    alert('Błąd połączenia z bazą!');
+                }
+            };
+
+
+
             const remainingBalance = 1000 - Object.values(picks).reduce((sum, p) => sum + (p.stake || 0), 0);
 
             const handlePick = (fId, fighter) => {
 
-                if (userBet) return;
+                if (userBet || isBettingLocked) return;
 
                 playSound('click');
 
@@ -467,7 +497,9 @@
                         const stake = pickData.stake || 0;
                         const fighter = pickData.fighter || pickData;
                         bal -= stake;
-                        if (officialResults[fId] === fighter) bal += (stake * 2);
+                        
+                        if (officialResults[fId] === fighter) bal += (stake * 2); // Wygrał = Podwojenie
+                        else if (officialResults[fId] === 'REMIS') bal += stake; // Remis = Zwrot stawki
                     });
                 }
                 return bal;
@@ -481,14 +513,17 @@
 
                 if (settled < FIGHTS.length) return 'WAITING';
 
-                return FIGHTS.every(f => officialResults[f.id] === (userBet.picks[f.id]?.fighter || userBet.picks[f.id])) ? 'WIN' : 'LOSE';
+                return FIGHTS.every(f => {
+                    const pick = userBet.picks[f.id]?.fighter || userBet.picks[f.id];
+                    return officialResults[f.id] === pick || officialResults[f.id] === 'REMIS';
+                }) ? 'WIN' : 'LOSE';
 
             })();
 
 
             const leaderboard = useMemo(() => {
-                if (!allBets) return [];
-                return Object.values(allBets).map(bet => {
+                if (!allBets || allBets.length === 0) return [];
+                return allBets.map(bet => {
                     let bal = 1000;
                     if (bet.typy) {
                         Object.entries(bet.typy).forEach(([fId, pickData]) => {
@@ -496,6 +531,7 @@
                             const fighter = pickData.fighter || pickData;
                             bal -= stake;
                             if (officialResults[fId] === fighter) bal += (stake * 2);
+                            else if (officialResults[fId] === 'REMIS') bal += stake;
                         });
                     }
                     return { nick: bet.nick || 'Nieznany', balance: bal };
@@ -503,15 +539,38 @@
             }, [allBets, officialResults]);
 
 
+            const getFightStats = (fightId) => {
+                if (!allBets || allBets.length === 0) return { p1: 0, p2: 0, total: 0 };
+                let p1Count = 0;
+                let p2Count = 0;
+                const f = FIGHTS.find(x => x.id === fightId);
+                
+                allBets.forEach(bet => {
+                    if(bet.typy && bet.typy[fightId]) {
+                        const pick = bet.typy[fightId].fighter || bet.typy[fightId];
+                        if(pick === f.p1) p1Count++;
+                        else if(pick === f.p2) p2Count++;
+                    }
+                });
+                const total = p1Count + p2Count;
+                return {
+                    p1: total ? Math.round((p1Count / total) * 100) : 0,
+                    p2: total ? Math.round((p2Count / total) * 100) : 0,
+                    total
+                };
+            };
+
+
+
             if (view === 'admin') {
 
                 return (
 
-                    <div className="min-h-screen p-8 max-w-xl mx-auto py-20">
+                    <div className="min-h-screen p-8 max-w-[800px] mx-auto py-20">
 
                         {!isLogged ? (
 
-                            <div className="card-bg p-8 rounded-3xl border border-yellow-500/20">
+                            <div className="card-bg p-8 rounded-3xl border border-yellow-500/20 max-w-sm mx-auto">
 
                                 <h2 className="fame-font gold-text text-xl mb-6 text-center uppercase italic">ADMIN LOGIN</h2>
 
@@ -519,7 +578,7 @@
 
                                 <input id="p" type="password" title="pass" className="w-full bg-zinc-900 p-4 rounded-xl mb-6 border border-zinc-800 text-white outline-none" placeholder="Hasło" />
 
-                                <button onClick={() => {if(document.getElementById('l').value==='qali09' && document.getElementById('p').value==='QaLi090909.') setIsLogged(true); else alert('Błąd!');}} className="w-full btn-gold py-4 rounded-xl uppercase">Wejdź</button>
+                                <button onClick={handleAdminLogin} className="w-full btn-gold py-4 rounded-xl uppercase font-black">Wejdź</button>
 
                                 <button onClick={()=>setView('home')} className="w-full mt-4 text-zinc-600 text-[10px] uppercase italic underline">Anuluj</button>
 
@@ -527,39 +586,87 @@
 
                         ) : (
 
-                            <div className="space-y-6">
+                            <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
 
-                                <h2 className="fame-font gold-text text-xl uppercase italic">Zatwierdź Wyniki</h2>
-
-                                <div className="card-bg p-4 rounded-3xl space-y-3 max-h-[60vh] overflow-y-auto custom-scroll border border-white/5">
-
-                                    {FIGHTS.map(f => (
-
-                                        <div key={f.id} className="p-4 bg-black/40 rounded-2xl border border-zinc-900">
-
-                                            <p className="text-[9px] text-zinc-500 font-bold mb-3 uppercase">{f.cat}</p>
-
-                                            <div className="grid grid-cols-2 gap-2">
-
-                                                {[f.p1, f.p2].map(p => (
-
-                                                    <button key={p} onClick={() => db.ref('official_results/' + f.id).set(p)}
-
-                                                    className={`py-3 rounded-xl text-[10px] font-black transition-all border ${officialResults[f.id] === p ? 'bg-yellow-500 text-black border-white' : 'bg-zinc-900 border-zinc-800 text-zinc-600'}`}>{p.toUpperCase()}</button>
-
-                                                ))}
-
-                                            </div>
-
-                                        </div>
-
-                                    ))}
-
+                                <h2 className="fame-font gold-text text-3xl uppercase italic text-center drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]">PANEL ADMINA</h2>
+                                
+                                {/* SEKECJA 1: ZABLOKUJ OBSTAWIANIE */}
+                                <div className="card-bg p-6 rounded-3xl border border-zinc-800 shadow-xl">
+                                    <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-widest mb-4">Status Obstawiania</h3>
+                                    <button 
+                                        onClick={() => db.ref('config/betting_locked').set(!isBettingLocked)}
+                                        className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-lg ${isBettingLocked ? 'bg-red-500/10 text-red-500 border border-red-500/50 hover:bg-red-500/20' : 'bg-green-500/10 text-green-500 border border-green-500/50 hover:bg-green-500/20'}`}
+                                    >
+                                        {isBettingLocked ? 'ZABLOKOWANE (Trwa Gala) - Kliknij by odblokować' : 'ODBLOKOWANE - Kliknij by Zablokować'}
+                                    </button>
                                 </div>
 
-                                <button onClick={() => { if(confirm("Czy na pewno wyczyścić wyniki?")) db.ref('official_results').remove(); }} className="w-full py-4 text-red-500 text-[10px] font-bold border border-red-500/20 rounded-xl uppercase hover:bg-red-500/5">Resetuj wszystkie wyniki</button>
+                                {/* SEKCJA 2: STATYSTYKI & WYNIKI */}
+                                <div className="card-bg p-6 rounded-3xl border border-zinc-800 shadow-xl space-y-4">
+                                    <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-widest mb-4">Wyniki Walk & Głosy Widzów</h3>
+                                    <div className="space-y-4 max-h-[50vh] overflow-y-auto custom-scroll pr-2">
+                                        {FIGHTS.map(f => {
+                                            const stats = getFightStats(f.id);
+                                            return (
+                                                <div key={f.id} className="p-4 bg-black/40 rounded-2xl border border-zinc-900 relative overflow-hidden">
+                                                    <p className="text-[10px] text-zinc-500 font-bold mb-3 uppercase flex justify-between">
+                                                        <span>{f.cat}</span>
+                                                        <span className="text-yellow-500 drop-shadow-md">Suma Głosów: {stats.total}</span>
+                                                    </p>
+                                                    
+                                                    {/* Pasek postępu */}
+                                                    {stats.total > 0 && (
+                                                        <div className="flex w-full h-1.5 bg-zinc-800 rounded-full mb-4 overflow-hidden shadow-inner">
+                                                            <div style={{width: `${stats.p1}%`}} className="bg-yellow-500 h-full transition-all duration-1000"></div>
+                                                            <div style={{width: `${stats.p2}%`}} className="bg-zinc-400 h-full transition-all duration-1000"></div>
+                                                        </div>
+                                                    )}
 
-                                <button onClick={() => setView('home')} className="w-full btn-gold py-5 rounded-2xl uppercase shadow-xl">Wróć</button>
+                                                    <div className="grid grid-cols-3 gap-2">
+                                                        {[f.p1, 'REMIS', f.p2].map((p, idx) => (
+                                                            <button key={p} onClick={() => db.ref('official_results/' + f.id).set(p)}
+                                                            className={`py-3 rounded-xl text-[9px] font-black transition-all border flex flex-col items-center justify-center gap-1.5 ${officialResults[f.id] === p ? (p==='REMIS' ? 'bg-zinc-600 text-white border-white' : 'bg-yellow-500 text-black border-white') : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-yellow-500/50 hover:text-white'}`}>
+                                                                <span className="text-center px-1">{p.toUpperCase()}</span>
+                                                                {p !== 'REMIS' && stats.total > 0 && (
+                                                                    <span className={`text-[8px] px-2 py-0.5 rounded-full font-black ${officialResults[f.id] === p ? 'bg-black/30 text-black' : 'bg-black text-yellow-500'}`}>{idx === 0 ? stats.p1 : stats.p2}%</span>
+                                                                )}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* SEKCJA 3: ZARZĄDZANIE KUPONAMI */}
+                                <div className="card-bg p-6 rounded-3xl border border-zinc-800 shadow-xl">
+                                    <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-widest mb-4 flex justify-between items-center">
+                                        <span>Zarządzaj Kuponami (Wszystkie: {allBets.length})</span>
+                                    </h3>
+                                    <div className="space-y-2 max-h-[30vh] overflow-y-auto custom-scroll pr-2">
+                                        {allBets.map(bet => (
+                                            <div key={bet.id} className="flex justify-between items-center bg-black/50 p-3 rounded-xl border border-zinc-800/80 hover:border-red-500/20 transition-colors">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-bold text-white uppercase">{bet.nick}</span>
+                                                    <span className="text-[9px] text-zinc-500">{new Date(bet.data).toLocaleString()}</span>
+                                                </div>
+                                                <button 
+                                                    onClick={() => { if(confirm(`Usunąć kupon gracza ${bet.nick}? Usunie go z bazy i tabeli TOP 10.`)) db.ref('wszystkie_kupony/' + bet.id).remove(); }}
+                                                    className="bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-2 rounded-lg text-[9px] font-black uppercase hover:bg-red-500 hover:text-white transition-all shadow-md"
+                                                >
+                                                    Usuń
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {allBets.length === 0 && <p className="text-[10px] text-zinc-500 italic text-center py-4">Brak wpisów.</p>}
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-4 pt-4">
+                                    <button onClick={() => { if(confirm("Czy na pewno wyczyścić wyniki walk? To zresetuje obecny etap Gali.")) db.ref('official_results').remove(); }} className="w-1/3 py-5 text-red-500 text-[10px] font-bold border border-red-500/20 rounded-xl uppercase hover:bg-red-500/10">Wyczyść Wyniki</button>
+                                    <button onClick={() => setView('home')} className="w-2/3 btn-gold py-5 rounded-xl text-sm font-black uppercase shadow-[0_0_20px_rgba(212,175,55,0.2)] hover:scale-[1.02] transition-transform">Wróć na Stronę</button>
+                                </div>
 
                             </div>
 
@@ -675,9 +782,9 @@
 
                                     <p>• Trafiony typ <b>podwaja Twoją stawkę</b>.</p>
 
-                                    <p>• Aby wysłać kupon, musisz wytypować wynik wszystkich 14 walk.</p>
+                                    <p>• W przypadku <b>REMISU / NO CONTEST</b> kwota wraca do Ciebie.</p>
 
-                                    <p>• Śledź tabelę liderów na dole strony!</p>
+                                    <p>• Aby wysłać kupon, musisz wytypować wynik wszystkich 14 walk.</p>
 
                                 </div>
 
@@ -758,7 +865,14 @@
                                             const fighterName = userPick?.fighter || userPick;
                                             const stake = userPick?.stake || 0;
 
-                                            const isCorrect = res ? (res === fighterName) : null;
+                                            let isCorrect = null;
+                                            if (res) {
+                                                if (res === fighterName) isCorrect = true;
+                                                else if (res === 'REMIS') isCorrect = 'REMIS';
+                                                else isCorrect = false;
+                                            }
+
+                                            const statusColor = isCorrect === true ? 'text-green-500' : isCorrect === 'REMIS' ? 'text-zinc-400' : isCorrect === false ? 'text-red-500' : 'gold-text';
 
                                             return (
 
@@ -766,8 +880,8 @@
 
                                                     <span className="text-zinc-600 text-[10px] font-bold uppercase w-1/3">{f.cat}</span>
 
-                                                    <span className={`text-[11px] font-black uppercase tracking-tighter text-right w-2/3 flex flex-col items-end gap-1 ${isCorrect===true?'text-green-500':isCorrect===false?'text-red-500':'gold-text'}`}>
-                                                        {fighterName}
+                                                    <span className={`text-[11px] font-black uppercase tracking-tighter text-right w-2/3 flex flex-col items-end gap-1 ${statusColor}`}>
+                                                        {fighterName} {isCorrect === 'REMIS' && <span className="text-[8px] bg-zinc-800 px-1 rounded ml-1 text-white">REMIS/ZWROT</span>}
                                                         <span className="opacity-60 text-[8px] tracking-widest font-bold text-zinc-400">STAWKA: {stake} FC</span>
                                                     </span>
 
@@ -785,6 +899,13 @@
 
                                 <button onClick={() => html2canvas(document.getElementById('ticket'), {backgroundColor:'#050505'}).then(c => { const a = document.createElement('a'); a.download=`WYNIK_${userBet.nick}.png`; a.href=c.toDataURL(); a.click(); })} className="w-full btn-gold py-6 rounded-3xl text-sm font-black uppercase shadow-xl animate-gold">Pobierz Dowód (PNG)</button>
 
+                            </div>
+
+                        ) : isBettingLocked ? (
+
+                            <div className="card-bg p-10 rounded-3xl border border-red-500/30 shadow-[0_0_30px_rgba(239,68,68,0.1)] flex flex-col items-center justify-center py-20 animate-in fade-in zoom-in-95">
+                                <h2 className="fame-font text-red-500 text-3xl font-black italic uppercase mb-4 text-center drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]">OBSTAWIANIE ZAKOŃCZONE</h2>
+                                <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest text-center">Gala trwa! Czekaj na wyniki live w panelu lub Discordzie.</p>
                             </div>
 
                         ) : (
