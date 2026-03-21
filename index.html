@@ -29,21 +29,16 @@
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #d4af37; border-radius: 10px; }
         
-        .fame-coin {
-            width: 44px; height: 44px;
-            background: radial-gradient(circle, #ffd700, #b8860b);
-            border-radius: 50%;
-            display: inline-flex; align-items: center; justify-content: center;
-            color: #000; font-weight: 900; font-size: 11px;
-            border: 2px solid #f1c40f;
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
-            animation: coin-spin 3s linear infinite;
-        }
-        @keyframes coin-spin { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(360deg); } }
+        /* FAMECOIN STYLES */
+        .coin-balance { background: linear-gradient(90deg, #1a1a1a, #0a0a0a); border: 1px solid #d4af37; padding: 10px 20px; border-radius: 50px; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 0 15px rgba(212,175,55,0.1); }
+        .coin-icon { width: 24px; height: 24px; background: radial-gradient(circle, #f4cf57, #d4af37); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: black; font-weight: 900; font-size: 10px; }
+        .ranking-row { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s; }
+        .ranking-row:hover { background: rgba(212,175,55,0.05); border-color: rgba(212,175,55,0.2); }
 
         .buy-popup { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 9999; animation: slideUp 0.5s ease-out; }
         @keyframes slideUp { from { bottom: -100px; opacity: 0; } to { bottom: 40px; opacity: 1; } }
         .btn-buy-anim { background: linear-gradient(45deg, #ff0000, #d4af37); color: white; box-shadow: 0 0 20px rgba(212,175,55,0.5); transition: all 0.3s ease; }
+        .btn-buy-anim:hover { transform: scale(1.1); box-shadow: 0 0 40px rgba(255,0,0,0.6); }
     </style>
 </head>
 <body>
@@ -68,6 +63,12 @@
         const DISCORD_LINK = "https://discord.gg/4MFDzTTFsH"; 
         const DEADLINE = new Date('2026-03-21T19:30:00'); 
         
+        const soundUrls = {
+            click: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
+            success: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
+            notify: 'https://assets.mixkit.co/active_storage/sfx/2357/2357-preview.mp3'
+        };
+
         const FIGHTS = [
             { id: 1, p1: 'Monika Weitz', p2: 'Wiktoria Zagacka', cat: 'BOKS' },
             { id: 2, p1: 'Krystian Jakiel', p2: 'Piotr Szewc', cat: 'BOKS' },
@@ -89,7 +90,7 @@
             const [view, setView] = useState('home');
             const [nick, setNick] = useState('');
             const [picks, setPicks] = useState({});
-            const [stakes, setStakes] = useState({});
+            const [stakes, setStakes] = useState({}); // NOWE: Przechowuje stawki na każdą walkę
             const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 });
             const [status, setStatus] = useState('idle');
             const [showTerms, setShowTerms] = useState(true);
@@ -97,11 +98,21 @@
             const [isLogged, setIsLogged] = useState(false);
             const [officialResults, setOfficialResults] = useState({});
             const [userBet, setUserBet] = useState(JSON.parse(localStorage.getItem('fame_bet_30') || null));
-            const [ranking, setRanking] = useState([]);
-            const [totalBets, setTotalBets] = useState(0);
             const [secretClicks, setSecretClicks] = useState(0);
             const [showBuyBtn, setShowBuyBtn] = useState(false);
             const [showFighterCard, setShowFighterCard] = useState(false);
+            const [totalBets, setTotalBets] = useState(0);
+            const [ranking, setRanking] = useState([]); // NOWE: Tabela wyników
+
+            const audioRefs = useRef({
+                click: new Audio(soundUrls.click),
+                success: new Audio(soundUrls.success),
+                notify: new Audio(soundUrls.notify)
+            });
+
+            const INITIAL_BALANCE = 1000;
+            const currentSpent = Object.values(stakes).reduce((a, b) => a + (parseInt(b) || 0), 0);
+            const wallet = INITIAL_BALANCE - currentSpent;
 
             useEffect(() => {
                 const resRef = db.ref('official_results');
@@ -111,19 +122,21 @@
                 betsRef.on('value', snap => {
                     const data = snap.val() || {};
                     setTotalBets(Object.keys(data).length);
-                    const leaderboard = Object.values(data).map(user => {
-                        let pts = 1000;
-                        if (user.stakes) {
-                            Object.keys(user.typy).forEach(fId => {
-                                if (officialResults[fId]) {
-                                    if (officialResults[fId] === user.typy[fId]) pts += parseInt(user.stakes[fId] || 0);
-                                    else pts -= parseInt(user.stakes[fId] || 0);
+                    
+                    // Obliczanie rankingu na żywo
+                    const calculatedRanking = Object.values(data).map(u => {
+                        let score = INITIAL_BALANCE;
+                        if (u.stakes && u.typy) {
+                            Object.keys(u.typy).forEach(id => {
+                                if (officialResults[id]) {
+                                    if (officialResults[id] === u.typy[id]) score += (parseInt(u.stakes[id]) || 0);
+                                    else score -= (parseInt(u.stakes[id]) || 0);
                                 }
                             });
                         }
-                        return { nick: user.nick, points: pts };
-                    }).sort((a, b) => b.points - a.points).slice(0, 10);
-                    setRanking(leaderboard);
+                        return { nick: u.nick, score };
+                    }).sort((a, b) => b.score - a.score).slice(0, 10);
+                    setRanking(calculatedRanking);
                 });
 
                 const timer = setInterval(() => {
@@ -136,66 +149,137 @@
                     });
                 }, 1000);
 
-                return () => { clearInterval(timer); resRef.off(); betsRef.off(); };
-            }, [officialResults]);
+                let buyInterval;
+                if (!showTerms && view !== 'admin') {
+                    buyInterval = setInterval(() => {
+                        setShowBuyBtn(true);
+                        setTimeout(() => setShowBuyBtn(false), 8000);
+                    }, 15000);
+                }
+
+                return () => { 
+                    clearInterval(timer); 
+                    if(buyInterval) clearInterval(buyInterval); 
+                    resRef.off(); 
+                    betsRef.off();
+                };
+            }, [showTerms, view, officialResults]);
+
+            const playSound = (name) => {
+                const sound = audioRefs.current[name];
+                if (sound) { sound.currentTime = 0; sound.volume = 0.5; sound.play().catch(() => {}); }
+            };
+
+            const unlockAudio = () => {
+                Object.values(audioRefs.current).forEach(s => { s.play().then(()=>s.pause()).catch(()=>{}); });
+                setShowTerms(false);
+                showNotify(userBet ? "Witaj ponownie! Kupon aktywny." : "Powodzenia! Masz 1000 F30 stawek.");
+            };
 
             const showNotify = (msg) => {
+                playSound('notify');
                 setToast({ show: true, msg });
                 setTimeout(() => setToast({ show: false, msg: '' }), 4000);
             };
 
             const handlePick = (fId, fighter) => {
                 if (userBet) return;
+                playSound('click');
                 setPicks(prev => ({ ...prev, [fId]: fighter }));
-                if (!stakes[fId]) setStakes(prev => ({ ...prev, [fId]: 50 }));
+                if (!stakes[fId]) setStakes(prev => ({ ...prev, [fId]: 50 })); // Domyślna stawka 50 przy wyborze
             };
 
-            const handleStakeChange = (fId, val) => {
-                const other = Object.entries(stakes).filter(([id]) => id != fId).reduce((s, [_, v]) => s + parseInt(v), 0);
-                const final = Math.min(Math.max(0, parseInt(val)), 1000 - other);
-                setStakes(prev => ({ ...prev, [fId]: final }));
+            const handleStakeChange = (fId, value) => {
+                const val = parseInt(value) || 0;
+                const otherStakesTotal = Object.entries(stakes)
+                    .filter(([id]) => parseInt(id) !== fId)
+                    .reduce((sum, [_, s]) => sum + s, 0);
+                
+                if (otherStakesTotal + val <= INITIAL_BALANCE) {
+                    setStakes(prev => ({ ...prev, [fId]: val }));
+                }
             };
 
             const submitBets = async (e) => {
                 e.preventDefault();
                 if (Object.keys(picks).length < FIGHTS.length) return alert("Obstaw wszystkie walki!");
+                if (currentSpent > INITIAL_BALANCE) return alert("Przekroczyłeś budżet FameCoinów!");
+                
                 setStatus('loading');
                 try {
-                    await db.ref('wszystkie_kupony').push({ nick, typy: picks, stakes, data: new Date().toISOString() });
-                    const betData = { nick, picks, stakes };
-                    localStorage.setItem('fame_bet_30', JSON.stringify(betData));
-                    setUserBet(betData);
+                    const payload = {
+                        nick: nick,
+                        typy: picks,
+                        stakes: stakes,
+                        data: new Date().toISOString()
+                    };
+                    
+                    await db.ref('wszystkie_kupony').push(payload);
+
+                    await fetch(WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            username: "FAME 30 | BANKIER",
+                            embeds: [{
+                                title: `🎯 NOWY ZAKŁAD: ${nick}`,
+                                description: `Portfel: **${INITIAL_BALANCE} F30**`,
+                                color: 15844367,
+                                fields: FIGHTS.map(f => ({ 
+                                    name: f.cat, 
+                                    value: `🥊 **${picks[f.id]}** (Stawka: ${stakes[f.id]} F30)`, 
+                                    inline: true 
+                                })),
+                                timestamp: new Date().toISOString()
+                            }]
+                        })
+                    });
+
+                    localStorage.setItem('fame_bet_30', JSON.stringify(payload));
+                    setUserBet(payload);
                     setStatus('success');
+                    playSound('success');
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-                    showNotify("Kupon wysłany pomyślnie!");
-                } catch (e) { alert("Błąd bazy!"); setStatus('idle'); }
+                } catch (e) { alert("Błąd połączenia z bazą!"); setStatus('idle'); }
             };
 
-            const currentWallet = 1000 - Object.values(stakes).reduce((a, b) => a + (parseInt(b) || 0), 0);
+            const winStatus = (() => {
+                if (!userBet) return null;
+                const settled = Object.keys(officialResults).length;
+                if (settled < FIGHTS.length) return 'WAITING';
+                return FIGHTS.every(f => officialResults[f.id] === userBet.typy[f.id]) ? 'WIN' : 'LOSE';
+            })();
 
+            // Widok Admina (Twoja oryginalna sekcja)
             if (view === 'admin') {
                 return (
                     <div className="min-h-screen p-8 max-w-xl mx-auto py-20">
                         {!isLogged ? (
                             <div className="card-bg p-8 rounded-3xl border border-yellow-500/20">
-                                <h2 className="fame-font gold-text text-xl mb-6 text-center italic">ADMIN</h2>
-                                <input id="l" className="w-full bg-zinc-900 p-4 rounded-xl mb-4 text-white outline-none" placeholder="Login" />
-                                <input id="p" type="password" className="w-full bg-zinc-900 p-4 rounded-xl mb-6 text-white outline-none" placeholder="Hasło" />
-                                <button onClick={() => {if(document.getElementById('l').value==='qali09' && document.getElementById('p').value==='QaLi090909.') setIsLogged(true);}} className="w-full btn-gold py-4 rounded-xl">WEJDŹ</button>
+                                <h2 className="fame-font gold-text text-xl mb-6 text-center uppercase italic">ADMIN LOGIN</h2>
+                                <input id="l" className="w-full bg-zinc-900 p-4 rounded-xl mb-4 border border-zinc-800 text-white outline-none" placeholder="Login" />
+                                <input id="p" type="password" title="pass" className="w-full bg-zinc-900 p-4 rounded-xl mb-6 border border-zinc-800 text-white outline-none" placeholder="Hasło" />
+                                <button onClick={() => {if(document.getElementById('l').value==='qali09' && document.getElementById('p').value==='QaLi090909.') setIsLogged(true); else alert('Błąd!');}} className="w-full btn-gold py-4 rounded-xl uppercase">Wejdź</button>
+                                <button onClick={()=>setView('home')} className="w-full mt-4 text-zinc-600 text-[10px] uppercase italic underline">Anuluj</button>
                             </div>
                         ) : (
                             <div className="space-y-6">
-                                {FIGHTS.map(f => (
-                                    <div key={f.id} className="p-4 card-bg rounded-2xl">
-                                        <p className="text-[10px] mb-2">{f.cat}</p>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {[f.p1, f.p2].map(p => (
-                                                <button key={p} onClick={() => db.ref('official_results/' + f.id).set(p)} className={`py-2 rounded-lg text-[10px] font-black ${officialResults[f.id] === p ? 'bg-yellow-500 text-black' : 'bg-zinc-900 text-zinc-500'}`}>{p}</button>
-                                            ))}
+                                <h2 className="fame-font gold-text text-xl uppercase italic">Zatwierdź Wyniki</h2>
+                                <div className="card-bg p-4 rounded-3xl space-y-3 max-h-[60vh] overflow-y-auto custom-scroll border border-white/5">
+                                    {FIGHTS.map(f => (
+                                        <div key={f.id} className="p-4 bg-black/40 rounded-2xl border border-zinc-900">
+                                            <p className="text-[9px] text-zinc-500 font-bold mb-3 uppercase">{f.cat}</p>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {[f.p1, f.p2].map(p => (
+                                                    <button key={p} onClick={() => db.ref('official_results/' + f.id).set(p)}
+                                                    className={`py-3 rounded-xl text-[10px] font-black transition-all border ${officialResults[f.id] === p ? 'bg-yellow-500 text-black border-white' : 'bg-zinc-900 border-zinc-800 text-zinc-600'}`}>{p.toUpperCase()}</button>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                                <button onClick={() => setView('home')} className="w-full btn-gold py-4 rounded-xl">WRÓĆ</button>
+                                    ))}
+                                </div>
+                                <button onClick={() => { if(confirm("Czy na pewno wyczyścić wyniki?")) db.ref('official_results').remove(); }} className="w-full py-4 text-red-500 text-[10px] font-bold border border-red-500/20 rounded-xl uppercase hover:bg-red-500/5">Resetuj wyniki</button>
+                                <button onClick={() => setView('home')} className="w-full btn-gold py-5 rounded-2xl uppercase shadow-xl">Wróć</button>
                             </div>
                         )}
                     </div>
@@ -204,110 +288,174 @@
 
             return (
                 <div className="min-h-screen pb-20">
+                    {/* UI Elementy (Karta, Buy Pop, Toast) */}
+                    {!showTerms && view !== 'admin' && (
+                        <button onClick={() => setShowFighterCard(true)} className="fixed left-0 top-1/2 -translate-y-1/2 z-[300] bg-zinc-900/90 border-r-2 border-y-2 border-yellow-500 p-4 rounded-r-2xl hover:bg-yellow-500 transition-all group shadow-2xl">
+                            <p className="[writing-mode:vertical-lr] rotate-180 fame-font text-[10px] font-black tracking-[0.3em] uppercase group-hover:text-black italic">KARTA WALK</p>
+                        </button>
+                    )}
+
                     {showFighterCard && (
                         <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 blur-bg animate-in fade-in duration-300">
                             <div className="relative max-w-4xl w-full flex flex-col items-center">
-                                <button onClick={() => setShowFighterCard(false)} className="mb-4 text-white fame-font text-sm font-black bg-black/50 px-6 py-2 rounded-full border border-white/10 uppercase">Zamknij [X]</button>
-                                <img src="karta.png" className="max-w-full max-h-[80vh] object-contain rounded-2xl border-2 border-yellow-500 shadow-2xl" alt="CARD" />
+                                <button onClick={() => setShowFighterCard(false)} className="mb-4 text-white fame-font text-sm hover:text-yellow-500 font-black bg-black/50 px-4 py-2 rounded-full border border-white/10 uppercase italic">Zamknij [X]</button>
+                                <img src="karta.png" className="max-w-full max-h-[80vh] object-contain rounded-2xl border-2 border-yellow-500 shadow-2xl" alt="FAME 30" />
                             </div>
                         </div>
                     )}
 
+                    {showBuyBtn && (
+                        <div className="buy-popup">
+                            <a href={DISCORD_LINK} target="_blank" onClick={() => setShowBuyBtn(false)} className="btn-buy-anim px-10 py-5 rounded-full text-lg fame-font italic flex items-center gap-3">🚀 KUP RESTREAM</a>
+                        </div>
+                    )}
+
                     <div className={`fixed top-5 right-5 z-[300] p-4 rounded-xl card-bg border-l-4 border-l-yellow-500 shadow-2xl flex items-center gap-4 ${toast.show ? 'toast-show' : 'toast-hide'}`}>
+                        <div className="bg-yellow-500/20 p-2 rounded-full font-bold text-yellow-500">✓</div>
                         <div><p className="text-[10px] text-zinc-500 font-bold uppercase italic">SYSTEM</p><p className="text-xs font-bold text-white">{toast.msg}</p></div>
                     </div>
 
                     {showTerms && (
                         <div className="fixed inset-0 z-[500] flex items-center justify-center p-6 blur-bg">
-                            <div className="card-bg w-full max-w-md p-10 rounded-[40px] border border-yellow-500/20 text-center">
-                                <h2 className="fame-font gold-text text-4xl mb-4 italic uppercase">FAME 30</h2>
-                                <p className="text-zinc-400 text-sm mb-8">Otrzymujesz 1000 F30. Rozdziel je na walki i walcz o Top 1 rankingów!</p>
-                                <button onClick={() => setShowTerms(false)} className="w-full btn-gold py-6 rounded-2xl animate-gold">START</button>
+                            <div className="card-bg w-full max-w-md p-10 rounded-[40px] border border-yellow-500/20 text-center animate-in zoom-in duration-300">
+                                <h2 className="fame-font gold-text text-4xl mb-2 italic uppercase">FAME 30</h2>
+                                <p className="text-zinc-500 text-[10px] font-black tracking-[0.4em] uppercase mb-8 italic">System FameCoin</p>
+                                <div className="text-zinc-400 text-[11px] text-left space-y-4 mb-10 italic bg-black/50 p-6 rounded-2xl border border-zinc-800">
+                                    <p>• Otrzymujesz **1000 F30** na start.</p>
+                                    <p>• Rozdziel stawkę mądrze między walki.</p>
+                                    <p>• Trafiony typ = dodajesz stawkę do portfela.</p>
+                                    <p>• Błąd = tracisz postawione FameCoiny.</p>
+                                </div>
+                                <button onClick={unlockAudio} className="w-full btn-gold py-6 rounded-2xl uppercase tracking-widest text-xs animate-gold">WCHODZĘ DO GRY</button>
                             </div>
                         </div>
                     )}
 
-                    <div className="max-w-2xl mx-auto py-12 px-6">
-                        <header className="text-center mb-16 relative">
+                    {/* MAIN APP CONTENT */}
+                    <div className={`max-w-2xl mx-auto py-12 px-6 transition-all duration-1000 ${showTerms ? 'blur-2xl scale-95' : 'blur-0 scale-100'}`}>
+                        <header className="text-center mb-16 select-none relative">
                             <h1 onClick={() => {const c=secretClicks+1; setSecretClicks(c); if(c===5) setView('admin');}} 
-                                className="fame-font text-7xl font-black italic gold-text mb-6 tracking-tighter cursor-default">FAME 30</h1>
+                                className="fame-font text-8xl font-black italic gold-text mb-4 tracking-tighter drop-shadow-[0_0_20px_rgba(212,175,55,0.4)] cursor-default">FAME 30</h1>
                             
-                            <div className="flex justify-center gap-4 mb-8">
-                                {[{v:timeLeft.d,l:'D'},{v:timeLeft.h,l:'H'},{v:timeLeft.m,l:'M'},{v:timeLeft.s,l:'S'}].map(t=>(
-                                    <div key={t.l} className="timer-box w-14 py-2 rounded-xl border border-zinc-800">
-                                        <div className="text-xl font-black text-white">{t.v}</div>
-                                        <div className="text-[8px] text-zinc-500 font-bold">{t.l}</div>
+                            <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto mb-8">
+                                {[{v:timeLeft.d,l:'Dni'},{v:timeLeft.h,l:'Godz'},{v:timeLeft.m,l:'Min'},{v:timeLeft.s,l:'Sek'}].map(t=>(
+                                    <div key={t.l} className="timer-box p-3 rounded-xl border border-zinc-800/50">
+                                        <div className="text-2xl font-black fame-font italic text-white">{t.v}</div>
+                                        <div className="text-[9px] uppercase text-zinc-500 font-black tracking-widest">{t.l}</div>
                                     </div>
                                 ))}
                             </div>
 
-                            <div className="inline-flex items-center gap-4 bg-zinc-900/50 p-4 rounded-3xl border border-yellow-500/20">
-                                <div className="fame-coin">F30</div>
-                                <div className="text-left">
-                                    <p className="text-[9px] text-zinc-500 font-black uppercase">Twój Portfel</p>
-                                    <p className="fame-font text-2xl gold-text">{userBet ? 'ZAKOŃCZONO' : `${currentWallet} F30`}</p>
+                            {/* PORTFEL FAMECOIN */}
+                            {!userBet && (
+                                <div className="coin-balance">
+                                    <div className="coin-icon">F</div>
+                                    <div className="text-left">
+                                        <p className="text-[8px] text-zinc-500 font-black uppercase italic">Dostępne środki</p>
+                                        <p className="fame-font text-xl gold-text">{wallet} <span className="text-[10px]">F30</span></p>
+                                    </div>
                                 </div>
-                            </div>
-                            <button onClick={()=>setShowFighterCard(true)} className="block mx-auto mt-6 text-[10px] fame-font gold-text underline italic tracking-widest uppercase">ZOBACZ KARTĘ WALK</button>
+                            )}
                         </header>
 
                         {userBet ? (
-                            <div className="space-y-8 animate-in slide-in-from-bottom">
-                                <div id="ticket" className="ticket-gradient p-10 rounded-[50px] border-2 border-yellow-500 shadow-2xl relative overflow-hidden">
-                                    <h2 className="fame-font gold-text text-xl mb-8 text-center uppercase italic">KUPON AKTYWNY</h2>
-                                    <p className="text-2xl font-black text-center mb-6 uppercase italic">{userBet.nick}</p>
-                                    <div className="space-y-2">
-                                        {FIGHTS.map(f => (
-                                            <div key={f.id} className="flex justify-between border-b border-zinc-800 pb-2 text-[10px] italic">
-                                                <span className="text-zinc-500 uppercase">{f.cat}</span>
-                                                <span className="gold-text font-black uppercase">{userBet.picks[f.id]} ({userBet.stakes[f.id]} F30)</span>
-                                            </div>
-                                        ))}
-                                    </div>
+                            <div className="space-y-8 animate-in slide-in-from-bottom duration-700">
+                                <div className="text-center">
+                                    {winStatus === 'WAITING' && <div className="bg-yellow-500/10 border border-yellow-500/30 p-8 rounded-3xl"><h2 className="fame-font gold-text text-2xl italic uppercase">Kupon w grze...</h2></div>}
+                                    {winStatus === 'WIN' && <div className="bg-green-500/20 border-2 border-green-500 p-8 rounded-3xl shadow-xl"><h2 className="fame-font text-green-500 text-4xl italic uppercase">WYGRAŁEŚ! 🏆</h2></div>}
+                                    {winStatus === 'LOSE' && <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-3xl"><h2 className="fame-font text-red-500 text-2xl italic uppercase opacity-60">Kupon Przegrany</h2></div>}
                                 </div>
-                                <button onClick={() => html2canvas(document.getElementById('ticket'), {backgroundColor:'#050505'}).then(c => { const a = document.createElement('a'); a.download=`F30_${userBet.nick}.png`; a.href=c.toDataURL(); a.click(); })} className="w-full btn-gold py-6 rounded-3xl uppercase font-black">Pobierz Dowód (PNG)</button>
+
+                                <div id="ticket" className="ticket-gradient p-10 rounded-[50px] border-2 border-yellow-500 relative overflow-hidden shadow-2xl">
+                                    <div className="absolute top-0 right-0 p-6 opacity-5 fame-font text-6xl italic text-white">F30</div>
+                                    <h2 className="fame-font gold-text text-xl mb-8 uppercase italic text-center underline decoration-yellow-500/20">POTWIERDZENIE ZAKŁADU</h2>
+                                    <p className="text-3xl font-black fame-font text-white mb-8 uppercase italic text-center underline decoration-yellow-500/30">{userBet.nick}</p>
+                                    <div className="space-y-3">
+                                        {FIGHTS.map(f => {
+                                            const res = officialResults[f.id];
+                                            const isCorrect = res ? (res === userBet.typy[f.id]) : null;
+                                            return (
+                                                <div key={f.id} className="flex justify-between border-b border-zinc-800/50 pb-2 px-4 italic">
+                                                    <span className="text-zinc-600 text-[10px] font-bold uppercase">{f.cat}</span>
+                                                    <div className="text-right">
+                                                        <span className={`text-[10px] font-black uppercase ${isCorrect===true?'text-green-500':isCorrect===false?'text-red-500':'gold-text'}`}>{userBet.typy[f.id]}</span>
+                                                        <span className="text-[8px] text-zinc-500 ml-2">({userBet.stakes[f.id]} F30)</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="mt-10 text-[8px] text-zinc-600 font-black tracking-[0.8em] uppercase opacity-40 text-center italic">SYSTEM WERYFIKACJI WALUTY</div>
+                                </div>
+                                <button onClick={() => html2canvas(document.getElementById('ticket'), {backgroundColor:'#050505'}).then(c => { const a = document.createElement('a'); a.download=`FAME30_KUPON_${userBet.nick}.png`; a.href=c.toDataURL(); a.click(); })} className="w-full btn-gold py-6 rounded-3xl text-sm font-black uppercase shadow-xl animate-gold">Pobierz Dowód (PNG)</button>
                             </div>
                         ) : (
                             <form onSubmit={submitBets} className="space-y-6">
-                                <input required className="w-full bg-zinc-900 border border-zinc-800 p-5 rounded-2xl text-center text-xl font-bold uppercase text-white" placeholder="TWÓJ NICK" value={nick} onChange={e=>setNick(e.target.value.toUpperCase())} />
+                                <div className="card-bg p-8 rounded-3xl border border-zinc-800/50 shadow-inner">
+                                    <label className="block text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] text-center mb-4 italic">Twój Nick Discord</label>
+                                    <input required className="w-full bg-black border border-zinc-800 p-5 rounded-2xl text-center text-xl font-bold focus:border-yellow-500 outline-none uppercase text-white tracking-widest transition-all" placeholder="NICK#0000" value={nick} onChange={e=>setNick(e.target.value.toUpperCase())} />
+                                </div>
+
                                 <div className="space-y-4">
                                     {FIGHTS.map(f => (
-                                        <div key={f.id} className="card-bg p-6 rounded-3xl border border-zinc-800 group">
-                                            <p className="text-center text-[9px] text-zinc-500 font-bold mb-4 uppercase tracking-widest">{f.cat}</p>
-                                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                        <div key={f.id} className="card-bg p-6 rounded-3xl border border-zinc-800/30 hover:border-zinc-700 transition-colors group">
+                                            <p className="text-center text-[9px] text-zinc-500 font-bold mb-5 uppercase tracking-[0.4em] italic group-hover:text-yellow-500 transition-colors">{f.cat}</p>
+                                            <div className="grid grid-cols-2 gap-4">
                                                 {[f.p1, f.p2].map(p => (
-                                                    <button key={p} type="button" onClick={() => handlePick(f.id, p)} className={`py-5 rounded-xl font-black text-[10px] transition-all border-2 ${picks[f.id]===p ? 'btn-gold border-white' : 'bg-black border-zinc-900 text-zinc-600'}`}>{p.toUpperCase()}</button>
+                                                    <button key={p} type="button" onClick={() => handlePick(f.id, p)} 
+                                                        className={`py-6 rounded-2xl font-black text-[10px] transition-all border-2 ${picks[f.id]===p ? 'btn-gold border-white scale-[1.05] shadow-lg shadow-yellow-500/20' : 'bg-black border-zinc-900 text-zinc-700 hover:border-zinc-700'}`}>{p.toUpperCase()}</button>
                                                 ))}
                                             </div>
+                                            {/* SEKCJA STAWKI */}
                                             {picks[f.id] && (
-                                                <div className="mt-2 animate-in fade-in">
-                                                    <div className="flex justify-between text-[10px] mb-2 font-bold uppercase italic"><span className="text-zinc-500">Stawka:</span><span className="gold-text">{stakes[f.id]} F30</span></div>
-                                                    <input type="range" min="0" max="1000" step="10" value={stakes[f.id] || 0} onChange={(e) => handleStakeChange(f.id, e.target.value)} className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-yellow-500" />
+                                                <div className="mt-6 pt-6 border-t border-zinc-900 animate-in slide-in-from-top duration-300">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <span className="text-[10px] text-zinc-500 font-black uppercase italic">Stawka na walkę:</span>
+                                                        <span className="gold-text font-black fame-font text-sm">{stakes[f.id] || 0} F30</span>
+                                                    </div>
+                                                    <input 
+                                                        type="range" min="0" max={INITIAL_BALANCE} step="10"
+                                                        value={stakes[f.id] || 0}
+                                                        onChange={(e) => handleStakeChange(f.id, e.target.value)}
+                                                        className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+                                                    />
                                                 </div>
                                             )}
                                         </div>
                                     ))}
                                 </div>
-                                <button type="submit" disabled={status==='loading'} className="w-full btn-gold py-8 rounded-[40px] text-2xl font-black italic animate-gold uppercase mt-10">
-                                    {status === 'loading' ? 'WYSYŁANIE...' : 'ZATWIERDŹ KUPON'}
+
+                                <button type="submit" disabled={status==='loading'} className="w-full btn-gold py-8 rounded-[40px] text-2xl font-black italic shadow-2xl uppercase animate-gold disabled:opacity-50 mt-10">
+                                    {status === 'loading' ? 'WYSYŁANIE...' : 'ZATWIERDŹ ZAKŁADY'}
                                 </button>
                             </form>
                         )}
-
-                        <div className="mt-20 card-bg p-8 rounded-[40px] border border-zinc-800 shadow-2xl">
-                            <h3 className="fame-font gold-text text-xl mb-8 text-center uppercase italic underline decoration-yellow-500/20">Ranking Rekinów</h3>
-                            <div className="space-y-3">
-                                {ranking.map((p, i) => (
-                                    <div key={i} className="flex justify-between items-center p-5 bg-black/40 rounded-2xl border border-zinc-900 hover:border-yellow-500/30 transition-all">
-                                        <span className="fame-font gold-text text-sm">#{i+1} {p.nick}</span>
-                                        <span className="font-black text-white text-sm">{p.points} F30</span>
+                        
+                        {/* TABELA RANKINGOWA (LIVE) */}
+                        <div className="mt-24">
+                            <h3 className="fame-font gold-text text-xl mb-8 text-center uppercase italic">Tabela Mistrzów (TOP 10)</h3>
+                            <div className="space-y-2">
+                                <div className="flex justify-between px-6 text-[10px] text-zinc-600 font-black uppercase italic mb-2">
+                                    <span>Zawodnik</span>
+                                    <span>Bilans F30</span>
+                                </div>
+                                {ranking.map((player, idx) => (
+                                    <div key={idx} className="ranking-row flex justify-between items-center p-5 rounded-2xl">
+                                        <div className="flex items-center gap-4">
+                                            <span className="fame-font gold-text text-xs">#{idx + 1}</span>
+                                            <span className="font-bold text-sm tracking-wide">{player.nick}</span>
+                                        </div>
+                                        <span className={`fame-font text-sm ${player.score >= INITIAL_BALANCE ? 'text-green-500' : 'text-red-500'}`}>
+                                            {player.score}
+                                        </span>
                                     </div>
                                 ))}
+                                {ranking.length === 0 && <p className="text-center text-zinc-700 text-xs italic">Brak danych w rankingu...</p>}
                             </div>
                         </div>
 
                         <footer className="mt-20 text-center opacity-20">
-                            <p className="text-[8px] fame-font tracking-[1em] uppercase italic">RESTREAM © 2026</p>
+                            <p className="text-[8px] fame-font tracking-[1em] uppercase select-none italic">RESTREAM © 2026</p>
                         </footer>
                     </div>
                 </div>
