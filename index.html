@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 
 <html lang="pl">
 
@@ -60,25 +60,49 @@
 
         
 
-        /* FAMECOIN STYLES */
+        .buy-popup {
 
-        .coin-balance { background: linear-gradient(90deg, #1a1a1a, #0a0a0a); border: 1px solid #d4af37; padding: 10px 20px; border-radius: 50px; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 0 15px rgba(212,175,55,0.1); }
+            position: fixed;
 
-        .coin-icon { width: 24px; height: 24px; background: radial-gradient(circle, #f4cf57, #d4af37); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: black; font-weight: 900; font-size: 10px; }
+            bottom: 40px;
 
-        .ranking-row { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s; }
+            left: 50%;
 
-        .ranking-row:hover { background: rgba(212,175,55,0.05); border-color: rgba(212,175,55,0.2); }
+            transform: translateX(-50%);
 
+            z-index: 9999;
 
+            animation: slideUp 0.5s ease-out;
 
-        .buy-popup { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 9999; animation: slideUp 0.5s ease-out; }
+        }
 
-        @keyframes slideUp { from { bottom: -100px; opacity: 0; } to { bottom: 40px; opacity: 1; } }
+        @keyframes slideUp {
 
-        .btn-buy-anim { background: linear-gradient(45deg, #ff0000, #d4af37); color: white; box-shadow: 0 0 20px rgba(212,175,55,0.5); transition: all 0.3s ease; }
+            from { bottom: -100px; opacity: 0; }
 
-        .btn-buy-anim:hover { transform: scale(1.1); box-shadow: 0 0 40px rgba(255,0,0,0.6); }
+            to { bottom: 40px; opacity: 1; }
+
+        }
+
+        .btn-buy-anim {
+
+            background: linear-gradient(45deg, #ff0000, #d4af37);
+
+            color: white;
+
+            box-shadow: 0 0 20px rgba(212,175,55,0.5);
+
+            transition: all 0.3s ease;
+
+        }
+
+        .btn-buy-anim:hover {
+
+            transform: scale(1.1);
+
+            box-shadow: 0 0 40px rgba(255,0,0,0.6);
+
+        }
 
     </style>
 
@@ -182,8 +206,6 @@
 
             const [picks, setPicks] = useState({});
 
-            const [stakes, setStakes] = useState({}); // NOWE: Przechowuje stawki na każdą walkę
-
             const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 });
 
             const [status, setStatus] = useState('idle');
@@ -206,8 +228,6 @@
 
             const [totalBets, setTotalBets] = useState(0);
 
-            const [ranking, setRanking] = useState([]); // NOWE: Tabela wyników
-
 
 
             const audioRefs = useRef({
@@ -222,14 +242,6 @@
 
 
 
-            const INITIAL_BALANCE = 1000;
-
-            const currentSpent = Object.values(stakes).reduce((a, b) => a + (parseInt(b) || 0), 0);
-
-            const wallet = INITIAL_BALANCE - currentSpent;
-
-
-
             useEffect(() => {
 
                 const resRef = db.ref('official_results');
@@ -240,43 +252,7 @@
 
                 const betsRef = db.ref('wszystkie_kupony');
 
-                betsRef.on('value', snap => {
-
-                    const data = snap.val() || {};
-
-                    setTotalBets(Object.keys(data).length);
-
-                    
-
-                    // Obliczanie rankingu na żywo
-
-                    const calculatedRanking = Object.values(data).map(u => {
-
-                        let score = INITIAL_BALANCE;
-
-                        if (u.stakes && u.typy) {
-
-                            Object.keys(u.typy).forEach(id => {
-
-                                if (officialResults[id]) {
-
-                                    if (officialResults[id] === u.typy[id]) score += (parseInt(u.stakes[id]) || 0);
-
-                                    else score -= (parseInt(u.stakes[id]) || 0);
-
-                                }
-
-                            });
-
-                        }
-
-                        return { nick: u.nick, score };
-
-                    }).sort((a, b) => b.score - a.score).slice(0, 10);
-
-                    setRanking(calculatedRanking);
-
-                });
+                betsRef.on('value', snap => setTotalBets(snap.numChildren()));
 
 
 
@@ -328,7 +304,7 @@
 
                 };
 
-            }, [showTerms, view, officialResults]);
+            }, [showTerms, view]);
 
 
 
@@ -348,7 +324,7 @@
 
                 setShowTerms(false);
 
-                showNotify(userBet ? "Witaj ponownie! Kupon aktywny." : "Powodzenia! Masz 1000 F30 stawek.");
+                showNotify(userBet ? "Witaj ponownie! Kupon aktywny." : "Powodzenia w typowaniu!");
 
             };
 
@@ -374,26 +350,7 @@
 
                 setPicks(prev => ({ ...prev, [fId]: fighter }));
 
-                if (!stakes[fId]) setStakes(prev => ({ ...prev, [fId]: 50 })); // Domyślna stawka 50 przy wyborze
-
             };
-
-
-
-const handleStakeChange = (fId, value) => {
-    const val = parseInt(value) || 0;
-    const otherStakesTotal = Object.entries(stakes)
-        .filter(([id]) => parseInt(id) !== fId) // fId to liczba z FIGHTS
-        .reduce((sum, [_, s]) => sum + (parseInt(s) || 0), 0);
-    
-    if (otherStakesTotal + val <= INITIAL_BALANCE) {
-        setStakes(prev => ({ ...prev, [fId]: val }));
-    } else {
-        // Opcjonalnie: ustaw maksymalną możliwą stawkę, jeśli użytkownik przesadzi
-        const maxPossible = INITIAL_BALANCE - otherStakesTotal;
-        setStakes(prev => ({ ...prev, [fId]: maxPossible }));
-    }
-};
 
 
 
@@ -403,29 +360,19 @@ const handleStakeChange = (fId, value) => {
 
                 if (Object.keys(picks).length < FIGHTS.length) return alert("Obstaw wszystkie walki!");
 
-                if (currentSpent > INITIAL_BALANCE) return alert("Przekroczyłeś budżet FameCoinów!");
-
-                
-
                 setStatus('loading');
 
                 try {
 
-                    const payload = {
+                    await db.ref('wszystkie_kupony').push({
 
                         nick: nick,
 
                         typy: picks,
 
-                        stakes: stakes,
-
                         data: new Date().toISOString()
 
-                    };
-
-                    
-
-                    await db.ref('wszystkie_kupony').push(payload);
+                    });
 
 
 
@@ -437,25 +384,15 @@ const handleStakeChange = (fId, value) => {
 
                         body: JSON.stringify({
 
-                            username: "FAME 30 | BANKIER",
+                            username: "FAME 30 | SYSTEM",
 
                             embeds: [{
 
-                                title: `🎯 NOWY ZAKŁAD: ${nick}`,
-
-                                description: `Portfel: **${INITIAL_BALANCE} F30**`,
+                                title: `🎯 NOWY KUPON: ${nick}`,
 
                                 color: 15844367,
 
-                                fields: FIGHTS.map(f => ({ 
-
-                                    name: f.cat, 
-
-                                    value: `🥊 **${picks[f.id]}** (Stawka: ${stakes[f.id]} F30)`, 
-
-                                    inline: true 
-
-                                })),
+                                fields: FIGHTS.map(f => ({ name: f.cat, value: `🥊 **${picks[f.id]}**`, inline: true })),
 
                                 timestamp: new Date().toISOString()
 
@@ -465,11 +402,11 @@ const handleStakeChange = (fId, value) => {
 
                     });
 
+                    const betData = { nick, picks, date: new Date().toLocaleString() };
 
+                    localStorage.setItem('fame_bet_30', JSON.stringify(betData));
 
-                    localStorage.setItem('fame_bet_30', JSON.stringify(payload));
-
-                    setUserBet(payload);
+                    setUserBet(betData);
 
                     setStatus('success');
 
@@ -491,13 +428,11 @@ const handleStakeChange = (fId, value) => {
 
                 if (settled < FIGHTS.length) return 'WAITING';
 
-                return FIGHTS.every(f => officialResults[f.id] === userBet.typy[f.id]) ? 'WIN' : 'LOSE';
+                return FIGHTS.every(f => officialResults[f.id] === userBet.picks[f.id]) ? 'WIN' : 'LOSE';
 
             })();
 
 
-
-            // Widok Admina (Twoja oryginalna sekcja)
 
             if (view === 'admin') {
 
@@ -553,7 +488,7 @@ const handleStakeChange = (fId, value) => {
 
                                 </div>
 
-                                <button onClick={() => { if(confirm("Czy na pewno wyczyścić wyniki?")) db.ref('official_results').remove(); }} className="w-full py-4 text-red-500 text-[10px] font-bold border border-red-500/20 rounded-xl uppercase hover:bg-red-500/5">Resetuj wyniki</button>
+                                <button onClick={() => { if(confirm("Czy na pewno wyczyścić wyniki?")) db.ref('official_results').remove(); }} className="w-full py-4 text-red-500 text-[10px] font-bold border border-red-500/20 rounded-xl uppercase hover:bg-red-500/5">Resetuj wszystkie wyniki</button>
 
                                 <button onClick={() => setView('home')} className="w-full btn-gold py-5 rounded-2xl uppercase shadow-xl">Wróć</button>
 
@@ -573,13 +508,17 @@ const handleStakeChange = (fId, value) => {
 
                 <div className="min-h-screen pb-20">
 
-                    {/* UI Elementy (Karta, Buy Pop, Toast) */}
-
                     {!showTerms && view !== 'admin' && (
 
-                        <button onClick={() => setShowFighterCard(true)} className="fixed left-0 top-1/2 -translate-y-1/2 z-[300] bg-zinc-900/90 border-r-2 border-y-2 border-yellow-500 p-4 rounded-r-2xl hover:bg-yellow-500 transition-all group shadow-2xl">
+                        <button 
 
-                            <p className="[writing-mode:vertical-lr] rotate-180 fame-font text-[10px] font-black tracking-[0.3em] uppercase group-hover:text-black italic">KARTA WALK</p>
+                            onClick={() => setShowFighterCard(true)} 
+
+                            className="fixed left-0 top-1/2 -translate-y-1/2 z-[300] bg-zinc-900/90 border-r-2 border-y-2 border-yellow-500 p-4 rounded-r-2xl hover:bg-yellow-500 transition-all group shadow-2xl"
+
+                        >
+
+                            <p className="[writing-mode:vertical-lr] rotate-180 fame-font text-[10px] font-black tracking-[0.3em] uppercase group-hover:text-black italic">ZOBACZ KARTĘ WALK</p>
 
                         </button>
 
@@ -593,9 +532,13 @@ const handleStakeChange = (fId, value) => {
 
                             <div className="relative max-w-4xl w-full flex flex-col items-center">
 
-                                <button onClick={() => setShowFighterCard(false)} className="mb-4 text-white fame-font text-sm hover:text-yellow-500 font-black bg-black/50 px-4 py-2 rounded-full border border-white/10 uppercase italic">Zamknij [X]</button>
+                                <button onClick={() => setShowFighterCard(false)} className="mb-4 text-white fame-font text-sm hover:text-yellow-500 transition-colors uppercase italic font-black bg-black/50 px-4 py-2 rounded-full border border-white/10">Zamknij [X]</button>
 
-                                <img src="karta.png" className="max-w-full max-h-[80vh] object-contain rounded-2xl border-2 border-yellow-500 shadow-2xl" alt="FAME 30" />
+                                <div className="relative w-full flex justify-center">
+
+                                    <img src="karta.png" className="max-w-full max-h-[80vh] object-contain rounded-2xl border-2 border-yellow-500 shadow-[0_0_50px_rgba(212,175,55,0.3)]" alt="FAME 30 CARD" />
+
+                                </div>
 
                             </div>
 
@@ -609,7 +552,11 @@ const handleStakeChange = (fId, value) => {
 
                         <div className="buy-popup">
 
-                            <a href={DISCORD_LINK} target="_blank" onClick={() => setShowBuyBtn(false)} className="btn-buy-anim px-10 py-5 rounded-full text-lg fame-font italic flex items-center gap-3">🚀 KUP RESTREAM</a>
+                            <a href={DISCORD_LINK} target="_blank" onClick={() => setShowBuyBtn(false)} className="btn-buy-anim px-10 py-5 rounded-full text-lg fame-font italic flex items-center gap-3">
+
+                                🚀 KUP RESTREAM GALI
+
+                            </a>
 
                         </div>
 
@@ -621,7 +568,7 @@ const handleStakeChange = (fId, value) => {
 
                         <div className="bg-yellow-500/20 p-2 rounded-full font-bold text-yellow-500">✓</div>
 
-                        <div><p className="text-[10px] text-zinc-500 font-bold uppercase italic">SYSTEM</p><p className="text-xs font-bold text-white">{toast.msg}</p></div>
+                        <div><p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest italic">SYSTEM</p><p className="text-xs font-bold text-white">{toast.msg}</p></div>
 
                     </div>
 
@@ -631,25 +578,27 @@ const handleStakeChange = (fId, value) => {
 
                         <div className="fixed inset-0 z-[500] flex items-center justify-center p-6 blur-bg">
 
-                            <div className="card-bg w-full max-w-md p-10 rounded-[40px] border border-yellow-500/20 text-center animate-in zoom-in duration-300">
+                            <div className="card-bg w-full max-w-md p-10 rounded-[40px] border border-yellow-500/20 text-center shadow-2xl animate-in zoom-in duration-300">
 
                                 <h2 className="fame-font gold-text text-4xl mb-2 italic uppercase">FAME 30</h2>
 
-                                <p className="text-zinc-500 text-[10px] font-black tracking-[0.4em] uppercase mb-8 italic">System FameCoin</p>
+                                <p className="text-zinc-500 text-[10px] font-black tracking-[0.4em] uppercase mb-8 italic">Weryfikacja Zawodnika</p>
 
                                 <div className="text-zinc-400 text-[11px] text-left space-y-4 mb-10 italic bg-black/50 p-6 rounded-2xl border border-zinc-800">
 
-                                    <p>• Otrzymujesz **1000 F30** na start.</p>
+                                    <p className="font-bold text-yellow-500 uppercase tracking-widest text-center mb-2 underline">ZASADY OBSTAWIANIA</p>
 
-                                    <p>• Rozdziel stawkę mądrze między walki.</p>
+                                    <p>• Każda osoba może wysłać <b>tylko jeden kupon</b>.</p>
 
-                                    <p>• Trafiony typ = dodajesz stawkę do portfela.</p>
+                                    <p>• Aby wygrać, musisz trafić wszystkie 14 walk.</p>
 
-                                    <p>• Błąd = tracisz postawione FameCoiny.</p>
+                                    <p>• Oszukiwanie skutkuje wykluczeniem z konkursu.</p>
+
+                                    <p>• Aby nagroda była ważna, należy pobrać plik z dowodem kuponu.</p>
 
                                 </div>
 
-                                <button onClick={unlockAudio} className="w-full btn-gold py-6 rounded-2xl uppercase tracking-widest text-xs animate-gold">WCHODZĘ DO GRY</button>
+                                <button onClick={unlockAudio} className="w-full btn-gold py-6 mt-4 rounded-2xl uppercase tracking-widest text-xs animate-gold">WCHODZĘ DO GRY</button>
 
                             </div>
 
@@ -659,19 +608,15 @@ const handleStakeChange = (fId, value) => {
 
 
 
-                    {/* MAIN APP CONTENT */}
-
                     <div className={`max-w-2xl mx-auto py-12 px-6 transition-all duration-1000 ${showTerms ? 'blur-2xl scale-95' : 'blur-0 scale-100'}`}>
 
                         <header className="text-center mb-16 select-none relative">
 
                             <h1 onClick={() => {const c=secretClicks+1; setSecretClicks(c); if(c===5) setView('admin');}} 
 
-                                className="fame-font text-8xl font-black italic gold-text mb-4 tracking-tighter drop-shadow-[0_0_20px_rgba(212,175,55,0.4)] cursor-default">FAME 30</h1>
+                                className="fame-font text-8xl font-black italic gold-text mb-4 tracking-tighter drop-shadow-[0_0_20px_rgba(212,175,55,0.4)] cursor-default active:scale-95 transition-transform">FAME 30</h1>
 
-                            
-
-                            <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto mb-8">
+                            <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto">
 
                                 {[{v:timeLeft.d,l:'Dni'},{v:timeLeft.h,l:'Godz'},{v:timeLeft.m,l:'Min'},{v:timeLeft.s,l:'Sek'}].map(t=>(
 
@@ -687,27 +632,11 @@ const handleStakeChange = (fId, value) => {
 
                             </div>
 
+                            <p className="text-center text-zinc-500 text-[10px] mt-6 uppercase font-black tracking-widest animate-pulse">
 
+                                Dołączyło już: <span className="gold-text">{totalBets}</span> graczy
 
-                            {/* PORTFEL FAMECOIN */}
-
-                            {!userBet && (
-
-                                <div className="coin-balance">
-
-                                    <div className="coin-icon">F</div>
-
-                                    <div className="text-left">
-
-                                        <p className="text-[8px] text-zinc-500 font-black uppercase italic">Dostępne środki</p>
-
-                                        <p className="fame-font text-xl gold-text">{wallet} <span className="text-[10px]">F30</span></p>
-
-                                    </div>
-
-                                </div>
-
-                            )}
+                            </p>
 
                         </header>
 
@@ -719,11 +648,11 @@ const handleStakeChange = (fId, value) => {
 
                                 <div className="text-center">
 
-                                    {winStatus === 'WAITING' && <div className="bg-yellow-500/10 border border-yellow-500/30 p-8 rounded-3xl"><h2 className="fame-font gold-text text-2xl italic uppercase">Kupon w grze...</h2></div>}
+                                    {winStatus === 'WAITING' && <div className="bg-yellow-500/10 border border-yellow-500/30 p-8 rounded-3xl"><div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div><h2 className="fame-font gold-text text-2xl italic uppercase">Kupon w grze...</h2><p className="text-zinc-500 text-[10px] mt-2 font-bold uppercase tracking-widest">Czekamy na oficjalne wyniki walk.</p></div>}
 
-                                    {winStatus === 'WIN' && <div className="bg-green-500/20 border-2 border-green-500 p-8 rounded-3xl shadow-xl"><h2 className="fame-font text-green-500 text-4xl italic uppercase">WYGRAŁEŚ! 🏆</h2></div>}
+                                    {winStatus === 'WIN' && <div className="bg-green-500/20 border-2 border-green-500 p-8 rounded-3xl shadow-[0_0_40px_rgba(34,197,94,0.2)]"><h2 className="fame-font text-green-500 text-4xl italic uppercase mb-2">WYGRAŁEŚ! 🏆</h2><p className="bg-green-500 text-black inline-block px-4 py-2 rounded-lg font-black text-xs uppercase tracking-widest">ZGŁOŚ SIĘ PO NAGRODĘ!</p></div>}
 
-                                    {winStatus === 'LOSE' && <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-3xl"><h2 className="fame-font text-red-500 text-2xl italic uppercase opacity-60">Kupon Przegrany</h2></div>}
+                                    {winStatus === 'LOSE' && <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-3xl"><h2 className="fame-font text-red-500 text-3xl italic uppercase opacity-60">Kupon Przegrany</h2></div>}
 
                                 </div>
 
@@ -731,9 +660,9 @@ const handleStakeChange = (fId, value) => {
 
                                 <div id="ticket" className="ticket-gradient p-10 rounded-[50px] border-2 border-yellow-500 relative overflow-hidden shadow-2xl">
 
-                                    <div className="absolute top-0 right-0 p-6 opacity-5 fame-font text-6xl italic text-white">F30</div>
+                                    <div className="absolute top-0 right-0 p-6 opacity-5 fame-font text-6xl italic">F30</div>
 
-                                    <h2 className="fame-font gold-text text-xl mb-8 uppercase italic text-center underline decoration-yellow-500/20">POTWIERDZENIE ZAKŁADU</h2>
+                                    <h2 className="fame-font gold-text text-xl mb-8 uppercase italic tracking-[0.3em] text-center">KUPON ZAPISANY</h2>
 
                                     <p className="text-3xl font-black fame-font text-white mb-8 uppercase italic text-center underline decoration-yellow-500/30">{userBet.nick}</p>
 
@@ -743,7 +672,7 @@ const handleStakeChange = (fId, value) => {
 
                                             const res = officialResults[f.id];
 
-                                            const isCorrect = res ? (res === userBet.typy[f.id]) : null;
+                                            const isCorrect = res ? (res === userBet.picks[f.id]) : null;
 
                                             return (
 
@@ -751,13 +680,7 @@ const handleStakeChange = (fId, value) => {
 
                                                     <span className="text-zinc-600 text-[10px] font-bold uppercase">{f.cat}</span>
 
-                                                    <div className="text-right">
-
-                                                        <span className={`text-[10px] font-black uppercase ${isCorrect===true?'text-green-500':isCorrect===false?'text-red-500':'gold-text'}`}>{userBet.typy[f.id]}</span>
-
-                                                        <span className="text-[8px] text-zinc-500 ml-2">({userBet.stakes[f.id]} F30)</span>
-
-                                                    </div>
+                                                    <span className={`text-[10px] font-black uppercase tracking-tighter ${isCorrect===true?'text-green-500':isCorrect===false?'text-red-500':'gold-text'}`}>{userBet.picks[f.id]}</span>
 
                                                 </div>
 
@@ -767,11 +690,11 @@ const handleStakeChange = (fId, value) => {
 
                                     </div>
 
-                                    <div className="mt-10 text-[8px] text-zinc-600 font-black tracking-[0.8em] uppercase opacity-40 text-center italic">SYSTEM WERYFIKACJI WALUTY</div>
+                                    <div className="mt-10 text-[8px] text-zinc-600 font-black tracking-[0.8em] uppercase opacity-40 text-center">RESTREAM WERYFIKACJA</div>
 
                                 </div>
 
-                                <button onClick={() => html2canvas(document.getElementById('ticket'), {backgroundColor:'#050505'}).then(c => { const a = document.createElement('a'); a.download=`FAME30_KUPON_${userBet.nick}.png`; a.href=c.toDataURL(); a.click(); })} className="w-full btn-gold py-6 rounded-3xl text-sm font-black uppercase shadow-xl animate-gold">Pobierz Dowód (PNG)</button>
+                                <button onClick={() => html2canvas(document.getElementById('ticket'), {backgroundColor:'#050505'}).then(c => { const a = document.createElement('a'); a.download=`WYNIK_${userBet.nick}.png`; a.href=c.toDataURL(); a.click(); })} className="w-full btn-gold py-6 rounded-3xl text-sm font-black uppercase shadow-xl animate-gold">Pobierz Dowód (PNG)</button>
 
                             </div>
 
@@ -803,41 +726,11 @@ const handleStakeChange = (fId, value) => {
 
                                                     <button key={p} type="button" onClick={() => handlePick(f.id, p)} 
 
-                                                        className={`py-6 rounded-2xl font-black text-[10px] transition-all border-2 ${picks[f.id]===p ? 'btn-gold border-white scale-[1.05] shadow-lg shadow-yellow-500/20' : 'bg-black border-zinc-900 text-zinc-700 hover:border-zinc-700'}`}>{p.toUpperCase()}</button>
+                                                        className={`py-6 rounded-2xl font-black text-xs transition-all border-2 ${picks[f.id]===p ? 'btn-gold border-white scale-[1.05] shadow-lg shadow-yellow-500/20' : 'bg-black border-zinc-900 text-zinc-700 hover:border-zinc-700'}`}>{p.toUpperCase()}</button>
 
                                                 ))}
 
                                             </div>
-
-                                            {/* SEKCJA STAWKI */}
-
-                                            {picks[f.id] && (
-
-                                                <div className="mt-6 pt-6 border-t border-zinc-900 animate-in slide-in-from-top duration-300">
-
-                                                    <div className="flex justify-between items-center mb-2">
-
-                                                        <span className="text-[10px] text-zinc-500 font-black uppercase italic">Stawka na walkę:</span>
-
-                                                        <span className="gold-text font-black fame-font text-sm">{stakes[f.id] || 0} F30</span>
-
-                                                    </div>
-
-                                                    <input 
-
-                                                        type="range" min="0" max={INITIAL_BALANCE} step="10"
-
-                                                        value={stakes[f.id] || 0}
-
-                                                        onChange={(e) => handleStakeChange(f.id, e.target.value)}
-
-                                                        className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-yellow-500"
-
-                                                    />
-
-                                                </div>
-
-                                            )}
 
                                         </div>
 
@@ -847,9 +740,9 @@ const handleStakeChange = (fId, value) => {
 
 
 
-                                <button type="submit" disabled={status==='loading'} className="w-full btn-gold py-8 rounded-[40px] text-2xl font-black italic shadow-2xl uppercase animate-gold disabled:opacity-50 mt-10">
+                                <button type="submit" disabled={status==='loading'} className="w-full btn-gold py-8 rounded-[40px] text-2xl font-black italic shadow-2xl uppercase tracking-tighter animate-gold disabled:opacity-50 mt-10">
 
-                                    {status === 'loading' ? 'WYSYŁANIE...' : 'ZATWIERDŹ ZAKŁADY'}
+                                    {status === 'loading' ? 'WYSYŁANIE...' : 'ZATWIERDŹ KUPON'}
 
                                 </button>
 
@@ -859,54 +752,28 @@ const handleStakeChange = (fId, value) => {
 
                         
 
-                        {/* TABELA RANKINGOWA (LIVE) */}
+                        <footer className="mt-20 text-center opacity-20">
 
-                        <div className="mt-24">
+                            <p className="text-[8px] fame-font tracking-[1em] uppercase select-none italic">RESTREAM © 2026</p>
 
-                            <h3 className="fame-font gold-text text-xl mb-8 text-center uppercase italic">Tabela Mistrzów (TOP 10)</h3>
+                        </footer>
 
-                            <div className="space-y-2">
-
-                                <div className="flex justify-between px-6 text-[10px] text-zinc-600 font-black uppercase italic mb-2">
-
-                                    <span>Zawodnik</span>
-
-                                    <span>Bilans F30</span>
-
-                                </div>
-
-                                {ranking.map((player, idx) => (
-
-                                    <div key={idx} className="ranking-row flex justify-between items-center p-5 rounded-2xl">
-
-                                        <div className="flex items-center gap-4">
-
-                                            <span className="fame-font gold-text text-xs">#{idx + 1}</span>
-
-                                            <span className="font-bold text-sm tracking-wide">{player.nick}</span>
-
-                                        </div>
-
-                                        <span className={`fame-font text-sm ${player.score >= INITIAL_BALANCE ? 'text-green-500' : 'text-red-500'}`}>
-
-                                            {player.score}
-
-                                        </span>
-
-                                    </div>
-
-                                ))}
-
-                                {ranking.length === 0 && <p className="text-center text-zinc-600 italic">Brak zakładów w systemie...</p>}
-                            </div>
-                        </div>
                     </div>
+
                 </div>
+
             );
+
         }
 
+
+
         const root = ReactDOM.createRoot(document.getElementById('root'));
+
         root.render(<App />);
+
     </script>
+
 </body>
+
 </html>
