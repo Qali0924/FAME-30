@@ -1,1557 +1,926 @@
 <!DOCTYPE html>
 
-
-
 <html lang="pl">
-
-
 
 <head>
 
-
-
     <meta charset="UTF-8">
-
-
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-
-
     <title>OBSTAWIANIE | RESTREAM</title>
-
-
 
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 
-
-
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
-
 
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-
-
     <script src="https://cdn.tailwindcss.com"></script>
-
-
 
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 
-
-
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
-
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-
 
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;700&display=swap" rel="stylesheet">
 
-
-
     <style>
-
-
 
         body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow-x: hidden; }
 
-
-
         .fame-font { font-family: 'Orbitron', sans-serif; }
-
-
 
         .gold-text { color: #d4af37; }
 
-
-
         .btn-gold { background: linear-gradient(45deg, #d4af37, #f4cf57); color: black; font-weight: 900; }
-
-
 
         .card-bg { background: #0f0f0f; border: 1px solid #1a1a1a; }
 
-
-
         .timer-box { background: rgba(212, 175, 55, 0.05); border: 1px solid rgba(212, 175, 55, 0.2); }
-
-
 
         .ticket-gradient { background: linear-gradient(135deg, #1a1a1a 0%, #050505 100%); border: 2px solid #d4af37; }
 
-
-
         .toast-show { transform: translateX(0); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-
-
 
         .toast-hide { transform: translateX(150%); transition: transform 0.5s ease-in; }
 
-
-
         @keyframes pulse-gold { 0%, 100% { box-shadow: 0 0 5px rgba(212,175,55,0.2); } 50% { box-shadow: 0 0 20px rgba(212,175,55,0.4); } }
-
-
 
         .animate-gold { animation: pulse-gold 3s infinite; }
 
-
-
         .blur-bg { backdrop-filter: blur(15px); background: rgba(0,0,0,0.9); }
-
-
 
         .custom-scroll::-webkit-scrollbar { width: 4px; }
 
-
-
         .custom-scroll::-webkit-scrollbar-thumb { background: #d4af37; border-radius: 10px; }
-
-
 
         
 
-
-
         .buy-popup {
-
-
 
             position: fixed;
 
-
-
             bottom: 40px;
-
-
 
             left: 50%;
 
-
-
             transform: translateX(-50%);
-
-
 
             z-index: 9999;
 
-
-
             animation: slideUp 0.5s ease-out;
 
-
-
         }
-
-
 
         @keyframes slideUp {
 
-
-
             from { bottom: -100px; opacity: 0; }
-
-
 
             to { bottom: 40px; opacity: 1; }
 
-
-
         }
-
-
 
         .btn-buy-anim {
 
-
-
             background: linear-gradient(45deg, #ff0000, #d4af37);
-
-
 
             color: white;
 
-
-
             box-shadow: 0 0 20px rgba(212,175,55,0.5);
-
-
 
             transition: all 0.3s ease;
 
-
-
         }
-
-
 
         .btn-buy-anim:hover {
 
-
-
             transform: scale(1.1);
-
-
 
             box-shadow: 0 0 40px rgba(255,0,0,0.6);
 
-
-
         }
 
+        /* FAMECOIN STYLES */
+        .f30-coin {
+            display: inline-flex; justify-content: center; align-items: center;
+            border-radius: 50%;
+            background: radial-gradient(circle, #f4cf57, #d4af37);
+            border: 2px solid #8b6508; color: black; font-weight: 900;
+            font-family: 'Orbitron', sans-serif; font-style: italic;
+            box-shadow: 0 0 15px rgba(212,175,55,0.4), inset 0 0 5px rgba(255,255,255,0.5);
+            animation: spin-coin 3s linear infinite;
+        }
 
+        @keyframes spin-coin {
+            0% { transform: rotateY(0deg); }
+            100% { transform: rotateY(360deg); }
+        }
+
+        .fc-slider {
+            -webkit-appearance: none; width: 100%; height: 6px; background: #2a2a2a; border-radius: 5px; outline: none;
+        }
+
+        .fc-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%;
+            background: linear-gradient(45deg, #d4af37, #f4cf57); cursor: pointer; box-shadow: 0 0 10px rgba(212,175,55,0.7);
+        }
 
     </style>
 
-
-
 </head>
 
-
-
 <body>
-
-
 
     <div id="root"></div>
 
 
 
-
-
-
-
     <script type="text/babel">
 
-
-
-        const { useState, useEffect, useRef } = React;
-
-
-
-
+        const { useState, useEffect, useRef, useMemo } = React;
 
 
 
         const firebaseConfig = {
 
-
-
             apiKey: "AIzaSyDSW1Rbw-gDY_JQ9YTrdb3lrJCZf0aAWyw",
-
-
 
             authDomain: "fame-30.firebaseapp.com",
 
-
-
             databaseURL: "https://fame-30-default-rtdb.europe-west1.firebasedatabase.app",
-
-
 
             projectId: "fame-30",
 
-
-
             storageBucket: "fame-30.firebasestorage.app",
-
-
 
             messagingSenderId: "447768289074",
 
-
-
             appId: "1:447768289074:web:49ce781e967ab86417812b"
-
-
 
         };
 
-
-
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-
-
 
         const db = firebase.database();
 
 
 
-
-
-
-
         const WEBHOOK_URL = "https://discord.com/api/webhooks/1482735762553176105/vCpLZNRhwP8bUYget_Aqf5e7ll6bBqvHTw3-HzvNeGyP";
-
-
 
         const DISCORD_LINK = "https://discord.gg/4MFDzTTFsH"; 
 
-
-
         const DEADLINE = new Date('2026-03-21T19:30:00'); 
-
-
 
         
 
-
-
         const soundUrls = {
-
-
 
             click: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
 
-
-
             success: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
 
-
-
             notify: 'https://assets.mixkit.co/active_storage/sfx/2357/2357-preview.mp3'
-
-
 
         };
 
 
 
-
-
-
-
         const FIGHTS = [
-
-
 
             { id: 1, p1: 'Monika Weitz', p2: 'Wiktoria Zagacka', cat: 'BOKS' },
 
-
-
             { id: 2, p1: 'Krystian Jakiel', p2: 'Piotr Szewc', cat: 'BOKS' },
-
-
 
             { id: 3, p1: 'Oskar Wierzejski', p2: 'Klaudiusz Mazanowski', cat: 'MMA' },
 
-
-
             { id: 4, p1: 'Michał Pasternak', p2: 'Michał Królik', cat: 'BOKS' },
-
-
 
             { id: 5, p1: 'Nikola Biela', p2: 'Żaneta Koloska', cat: 'K-1' },
 
-
-
             { id: 6, p1: 'Łukasz Pawłowski', p2: 'Nikodem Sławik', cat: 'K-1 / MMA' },
-
-
 
             { id: 7, p1: 'Robert Karaś', p2: 'Kasper Gutkowski', cat: 'BOKS / K-1' },
 
-
-
             { id: 8, p1: 'Krzyżanowski/Bazyluk', p2: 'Stępień/Fares', cat: '2vs2 MMA/BOKS' },
-
-
 
             { id: 9, p1: 'Marta Linkiewicz', p2: 'Izabela Badurek', cat: 'K-1' },
 
-
-
             { id: 10, p1: 'Alan Kwieciński', p2: 'Michał Skowronek', cat: 'K-1' },
-
-
 
             { id: 11, p1: 'Maksymilian Wiewiórka', p2: 'Alberto Simao', cat: 'MMA' },
 
-
-
             { id: 12, p1: 'Denis Załęcki', p2: 'Bartosz Szachta', cat: 'K-1' },
-
-
 
             { id: 13, p1: 'Jakub Flas', p2: 'Akop Szostak', cat: 'BOKS' },
 
-
-
             { id: 14, p1: 'Makhmud Muradov', p2: 'Denis Labryga', cat: 'MAIN EVENT K-1' }
-
-
 
         ];
 
 
 
-
-
-
-
         function App() {
-
-
 
             const [view, setView] = useState('home');
 
-
-
             const [nick, setNick] = useState('');
-
-
 
             const [picks, setPicks] = useState({});
 
-
-
             const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 });
-
-
 
             const [status, setStatus] = useState('idle');
 
-
-
             const [showTerms, setShowTerms] = useState(true);
-
-
 
             const [toast, setToast] = useState({ show: false, msg: '' });
 
-
-
             const [isLogged, setIsLogged] = useState(false);
-
-
 
             const [officialResults, setOfficialResults] = useState({});
 
-
-
             const [userBet, setUserBet] = useState(JSON.parse(localStorage.getItem('fame_bet_30') || null));
-
-
 
             const [secretClicks, setSecretClicks] = useState(0);
 
-
-
             const [showBuyBtn, setShowBuyBtn] = useState(false);
-
-
 
             const [showFighterCard, setShowFighterCard] = useState(false);
 
-
-
             const [totalBets, setTotalBets] = useState(0);
 
-
-
-
+            const [allBets, setAllBets] = useState({});
 
 
 
             const audioRefs = useRef({
 
-
-
                 click: new Audio(soundUrls.click),
-
-
 
                 success: new Audio(soundUrls.success),
 
-
-
                 notify: new Audio(soundUrls.notify)
-
-
 
             });
 
 
 
-
-
-
-
             useEffect(() => {
 
-
-
                 const resRef = db.ref('official_results');
-
-
 
                 resRef.on('value', snap => setOfficialResults(snap.val() || {}));
 
 
 
-
-
-
-
                 const betsRef = db.ref('wszystkie_kupony');
 
-
-
-                betsRef.on('value', snap => setTotalBets(snap.numChildren()));
-
-
-
-
+                betsRef.on('value', snap => {
+                    setTotalBets(snap.numChildren());
+                    setAllBets(snap.val() || {});
+                });
 
 
 
                 const timer = setInterval(() => {
 
-
-
                     const diff = DEADLINE - new Date();
-
-
 
                     setTimeLeft({
 
-
-
                         d: Math.max(0, Math.floor(diff / 86400000)),
-
-
 
                         h: Math.max(0, Math.floor((diff / 3600000) % 24)),
 
-
-
                         m: Math.max(0, Math.floor((diff / 60000) % 60)),
-
-
 
                         s: Math.max(0, Math.floor((diff / 1000) % 60))
 
-
-
                     });
-
-
 
                 }, 1000);
 
 
 
-
-
-
-
                 let buyInterval;
-
-
 
                 if (!showTerms && view !== 'admin') {
 
-
-
                     buyInterval = setInterval(() => {
-
-
 
                         setShowBuyBtn(true);
 
-
-
                         setTimeout(() => setShowBuyBtn(false), 8000);
 
-
-
                     }, 15000);
-
-
 
                 }
 
 
 
-
-
-
-
                 return () => { 
-
-
 
                     clearInterval(timer); 
 
-
-
                     if(buyInterval) clearInterval(buyInterval); 
-
-
 
                     resRef.off(); 
 
-
-
                     betsRef.off();
 
-
-
                 };
-
-
 
             }, [showTerms, view]);
 
 
 
-
-
-
-
             const playSound = (name) => {
-
-
 
                 const sound = audioRefs.current[name];
 
-
-
                 if (sound) { sound.currentTime = 0; sound.volume = 0.5; sound.play().catch(() => {}); }
 
-
-
             };
-
-
-
-
 
 
 
             const unlockAudio = () => {
 
-
-
                 Object.values(audioRefs.current).forEach(s => { s.play().then(()=>s.pause()).catch(()=>{}); });
-
-
 
                 setShowTerms(false);
 
-
-
                 showNotify(userBet ? "Witaj ponownie! Kupon aktywny." : "Powodzenia w typowaniu!");
 
-
-
             };
-
-
-
-
 
 
 
             const showNotify = (msg) => {
 
-
-
                 playSound('notify');
-
-
 
                 setToast({ show: true, msg });
 
-
-
                 setTimeout(() => setToast({ show: false, msg: '' }), 4000);
-
-
 
             };
 
 
 
-
-
-
+            // FAMECOIN LOGIC
+            const remainingBalance = 1000 - Object.values(picks).reduce((sum, p) => sum + (p.stake || 0), 0);
 
             const handlePick = (fId, fighter) => {
 
-
-
                 if (userBet) return;
-
-
 
                 playSound('click');
 
-
-
-                setPicks(prev => ({ ...prev, [fId]: fighter }));
-
-
+                setPicks(prev => {
+                    const currentStake = prev[fId]?.stake || 0;
+                    return { ...prev, [fId]: { fighter, stake: currentStake } };
+                });
 
             };
-
-
-
-
 
 
 
             const submitBets = async (e) => {
 
-
-
                 e.preventDefault();
 
-
-
-                if (Object.keys(picks).length < FIGHTS.length) return alert("Obstaw wszystkie walki!");
-
-
+                if (Object.keys(picks).length < FIGHTS.length) return alert("Obstaw wszystkich zawodników!");
 
                 setStatus('loading');
 
-
-
                 try {
-
-
 
                     await db.ref('wszystkie_kupony').push({
 
-
-
                         nick: nick,
-
-
 
                         typy: picks,
 
-
-
                         data: new Date().toISOString()
 
-
-
                     });
-
-
-
-
 
 
 
                     await fetch(WEBHOOK_URL, {
 
-
-
                         method: 'POST',
-
-
 
                         headers: { 'Content-Type': 'application/json' },
 
-
-
                         body: JSON.stringify({
-
-
 
                             username: "FAME 30 | SYSTEM",
 
-
-
                             embeds: [{
-
-
 
                                 title: `🎯 NOWY KUPON: ${nick}`,
 
-
-
                                 color: 15844367,
 
-
-
-                                fields: FIGHTS.map(f => ({ name: f.cat, value: `🥊 **${picks[f.id]}**`, inline: true })),
-
-
+                                fields: FIGHTS.map(f => {
+                                    const p = picks[f.id];
+                                    return { name: f.cat, value: `🥊 **${p?.fighter || 'Brak'}**\n💰 ${p?.stake || 0} FC`, inline: true };
+                                }),
 
                                 timestamp: new Date().toISOString()
 
-
-
                             }]
-
-
 
                         })
 
-
-
                     });
-
-
 
                     const betData = { nick, picks, date: new Date().toLocaleString() };
 
-
-
                     localStorage.setItem('fame_bet_30', JSON.stringify(betData));
-
-
 
                     setUserBet(betData);
 
-
-
                     setStatus('success');
-
-
 
                     playSound('success');
 
-
-
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
 
-
-
                 } catch (e) { alert("Błąd połączenia z bazą!"); setStatus('idle'); }
-
-
 
             };
 
 
 
-
-
-
+            const userCurrentBalance = useMemo(() => {
+                if (!userBet) return 1000;
+                let bal = 1000;
+                if(userBet.picks) {
+                    Object.entries(userBet.picks).forEach(([fId, pickData]) => {
+                        const stake = pickData.stake || 0;
+                        const fighter = pickData.fighter || pickData;
+                        bal -= stake;
+                        if (officialResults[fId] === fighter) bal += (stake * 2);
+                    });
+                }
+                return bal;
+            }, [userBet, officialResults]);
 
             const winStatus = (() => {
 
-
-
                 if (!userBet) return null;
-
-
 
                 const settled = Object.keys(officialResults).length;
 
-
-
                 if (settled < FIGHTS.length) return 'WAITING';
 
-
-
-                return FIGHTS.every(f => officialResults[f.id] === userBet.picks[f.id]) ? 'WIN' : 'LOSE';
-
-
+                return FIGHTS.every(f => officialResults[f.id] === (userBet.picks[f.id]?.fighter || userBet.picks[f.id])) ? 'WIN' : 'LOSE';
 
             })();
 
 
-
-
-
+            const leaderboard = useMemo(() => {
+                if (!allBets) return [];
+                return Object.values(allBets).map(bet => {
+                    let bal = 1000;
+                    if (bet.typy) {
+                        Object.entries(bet.typy).forEach(([fId, pickData]) => {
+                            const stake = pickData.stake || 0;
+                            const fighter = pickData.fighter || pickData;
+                            bal -= stake;
+                            if (officialResults[fId] === fighter) bal += (stake * 2);
+                        });
+                    }
+                    return { nick: bet.nick || 'Nieznany', balance: bal };
+                }).sort((a, b) => b.balance - a.balance).slice(0, 10);
+            }, [allBets, officialResults]);
 
 
             if (view === 'admin') {
 
-
-
                 return (
-
-
 
                     <div className="min-h-screen p-8 max-w-xl mx-auto py-20">
 
-
-
                         {!isLogged ? (
-
-
 
                             <div className="card-bg p-8 rounded-3xl border border-yellow-500/20">
 
-
-
                                 <h2 className="fame-font gold-text text-xl mb-6 text-center uppercase italic">ADMIN LOGIN</h2>
-
-
 
                                 <input id="l" className="w-full bg-zinc-900 p-4 rounded-xl mb-4 border border-zinc-800 text-white outline-none" placeholder="Login" />
 
-
-
                                 <input id="p" type="password" title="pass" className="w-full bg-zinc-900 p-4 rounded-xl mb-6 border border-zinc-800 text-white outline-none" placeholder="Hasło" />
-
-
 
                                 <button onClick={() => {if(document.getElementById('l').value==='qali09' && document.getElementById('p').value==='QaLi090909.') setIsLogged(true); else alert('Błąd!');}} className="w-full btn-gold py-4 rounded-xl uppercase">Wejdź</button>
 
-
-
                                 <button onClick={()=>setView('home')} className="w-full mt-4 text-zinc-600 text-[10px] uppercase italic underline">Anuluj</button>
 
-
-
                             </div>
-
-
 
                         ) : (
 
-
-
                             <div className="space-y-6">
-
-
 
                                 <h2 className="fame-font gold-text text-xl uppercase italic">Zatwierdź Wyniki</h2>
 
-
-
                                 <div className="card-bg p-4 rounded-3xl space-y-3 max-h-[60vh] overflow-y-auto custom-scroll border border-white/5">
-
-
 
                                     {FIGHTS.map(f => (
 
-
-
                                         <div key={f.id} className="p-4 bg-black/40 rounded-2xl border border-zinc-900">
-
-
 
                                             <p className="text-[9px] text-zinc-500 font-bold mb-3 uppercase">{f.cat}</p>
 
-
-
                                             <div className="grid grid-cols-2 gap-2">
-
-
 
                                                 {[f.p1, f.p2].map(p => (
 
-
-
                                                     <button key={p} onClick={() => db.ref('official_results/' + f.id).set(p)}
-
-
 
                                                     className={`py-3 rounded-xl text-[10px] font-black transition-all border ${officialResults[f.id] === p ? 'bg-yellow-500 text-black border-white' : 'bg-zinc-900 border-zinc-800 text-zinc-600'}`}>{p.toUpperCase()}</button>
 
-
-
                                                 ))}
-
-
 
                                             </div>
 
-
-
                                         </div>
-
-
 
                                     ))}
 
-
-
                                 </div>
-
-
 
                                 <button onClick={() => { if(confirm("Czy na pewno wyczyścić wyniki?")) db.ref('official_results').remove(); }} className="w-full py-4 text-red-500 text-[10px] font-bold border border-red-500/20 rounded-xl uppercase hover:bg-red-500/5">Resetuj wszystkie wyniki</button>
 
-
-
                                 <button onClick={() => setView('home')} className="w-full btn-gold py-5 rounded-2xl uppercase shadow-xl">Wróć</button>
-
-
 
                             </div>
 
-
-
                         )}
-
-
 
                     </div>
 
-
-
                 );
-
-
 
             }
 
 
 
-
-
-
-
             return (
-
-
 
                 <div className="min-h-screen pb-20">
 
 
-
                     {!showTerms && view !== 'admin' && (
-
-
-
-                        <button 
-
-
-
-                            onClick={() => setShowFighterCard(true)} 
-
-
-
-                            className="fixed left-0 top-1/2 -translate-y-1/2 z-[300] bg-zinc-900/90 border-r-2 border-y-2 border-yellow-500 p-4 rounded-r-2xl hover:bg-yellow-500 transition-all group shadow-2xl"
-
-
-
-                        >
-
-
-
-                            <p className="[writing-mode:vertical-lr] rotate-180 fame-font text-[10px] font-black tracking-[0.3em] uppercase group-hover:text-black italic">ZOBACZ KARTĘ WALK</p>
-
-
-
-                        </button>
-
-
-
+                        <div className="fixed top-5 left-2 md:left-5 z-[300] p-3 rounded-2xl card-bg border border-yellow-500/30 shadow-[0_0_20px_rgba(212,175,55,0.15)] flex items-center gap-3 animate-in fade-in duration-700">
+                            <div className="f30-coin" style={{width: '24px', height: '24px', fontSize: '8px'}}>F30</div>
+                            <div className="pr-2">
+                                <p className="text-[8px] text-zinc-500 uppercase font-black tracking-widest mb-0.5 italic">Twój Portfel</p>
+                                <p className="text-sm text-yellow-500 font-black fame-font">{userBet ? userCurrentBalance : remainingBalance} <span className="text-[10px] text-zinc-400">FC</span></p>
+                            </div>
+                        </div>
                     )}
 
 
+                    {!showTerms && view !== 'admin' && (
 
+                        <button 
 
+                            onClick={() => setShowFighterCard(true)} 
+
+                            className="fixed left-0 top-1/2 -translate-y-1/2 z-[300] bg-zinc-900/90 border-r-2 border-y-2 border-yellow-500 p-4 rounded-r-2xl hover:bg-yellow-500 transition-all group shadow-2xl"
+
+                        >
+
+                            <p className="[writing-mode:vertical-lr] rotate-180 fame-font text-[10px] font-black tracking-[0.3em] uppercase group-hover:text-black italic">ZOBACZ KARTĘ WALK</p>
+
+                        </button>
+
+                    )}
 
 
 
                     {showFighterCard && (
 
-
-
                         <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 blur-bg animate-in fade-in duration-300">
-
-
 
                             <div className="relative max-w-4xl w-full flex flex-col items-center">
 
-
-
                                 <button onClick={() => setShowFighterCard(false)} className="mb-4 text-white fame-font text-sm hover:text-yellow-500 transition-colors uppercase italic font-black bg-black/50 px-4 py-2 rounded-full border border-white/10">Zamknij [X]</button>
-
-
 
                                 <div className="relative w-full flex justify-center">
 
-
-
                                     <img src="karta.png" className="max-w-full max-h-[80vh] object-contain rounded-2xl border-2 border-yellow-500 shadow-[0_0_50px_rgba(212,175,55,0.3)]" alt="FAME 30 CARD" />
-
-
 
                                 </div>
 
-
-
                             </div>
-
-
 
                         </div>
 
-
-
                     )}
-
-
-
-
 
 
 
                     {showBuyBtn && (
 
-
-
                         <div className="buy-popup">
-
-
 
                             <a href={DISCORD_LINK} target="_blank" onClick={() => setShowBuyBtn(false)} className="btn-buy-anim px-10 py-5 rounded-full text-lg fame-font italic flex items-center gap-3">
 
-
-
                                 🚀 KUP RESTREAM GALI
-
-
 
                             </a>
 
-
-
                         </div>
-
-
 
                     )}
 
 
 
-
-
-
-
-                    <div className={`fixed top-5 right-5 z-[300] p-4 rounded-xl card-bg border-l-4 border-l-yellow-500 shadow-2xl flex items-center gap-4 ${toast.show ? 'toast-show' : 'toast-hide'}`}>
-
-
+                    <div className={`fixed top-5 right-2 md:right-5 z-[300] p-4 rounded-xl card-bg border-l-4 border-l-yellow-500 shadow-2xl flex items-center gap-4 ${toast.show ? 'toast-show' : 'toast-hide'}`}>
 
                         <div className="bg-yellow-500/20 p-2 rounded-full font-bold text-yellow-500">✓</div>
 
-
-
                         <div><p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest italic">SYSTEM</p><p className="text-xs font-bold text-white">{toast.msg}</p></div>
 
-
-
                     </div>
-
-
-
-
 
 
 
                     {showTerms && (
 
-
-
                         <div className="fixed inset-0 z-[500] flex items-center justify-center p-6 blur-bg">
-
-
 
                             <div className="card-bg w-full max-w-md p-10 rounded-[40px] border border-yellow-500/20 text-center shadow-2xl animate-in zoom-in duration-300">
 
-
-
                                 <h2 className="fame-font gold-text text-4xl mb-2 italic uppercase">FAME 30</h2>
-
-
 
                                 <p className="text-zinc-500 text-[10px] font-black tracking-[0.4em] uppercase mb-8 italic">Weryfikacja Zawodnika</p>
 
-
-
                                 <div className="text-zinc-400 text-[11px] text-left space-y-4 mb-10 italic bg-black/50 p-6 rounded-2xl border border-zinc-800">
-
-
 
                                     <p className="font-bold text-yellow-500 uppercase tracking-widest text-center mb-2 underline">ZASADY OBSTAWIANIA</p>
 
+                                    <p>• Na start otrzymujesz <b>1000 Famecoinów (FC)</b>.</p>
+                                    
+                                    <p>• Wybieraj zawodników i decyduj o stawce za pomocą suwaka.</p>
 
+                                    <p>• Trafiony typ <b>podwaja Twoją stawkę</b>.</p>
 
-                                    <p>• Każda osoba może wysłać <b>tylko jeden kupon</b>.</p>
+                                    <p>• Aby wysłać kupon, musisz wytypować wynik wszystkich 14 walk.</p>
 
-
-
-                                    <p>• Aby wygrać, musisz trafić wszystkie 14 walk.</p>
-
-
-
-                                    <p>• Oszukiwanie skutkuje wykluczeniem z konkursu.</p>
-
-
-
-                                    <p>• Aby nagroda była ważna, należy pobrać plik z dowodem kuponu.</p>
-
-
+                                    <p>• Śledź tabelę liderów na dole strony!</p>
 
                                 </div>
 
-
-
                                 <button onClick={unlockAudio} className="w-full btn-gold py-6 mt-4 rounded-2xl uppercase tracking-widest text-xs animate-gold">WCHODZĘ DO GRY</button>
-
-
 
                             </div>
 
-
-
                         </div>
-
-
 
                     )}
 
 
 
-
-
-
-
                     <div className={`max-w-2xl mx-auto py-12 px-6 transition-all duration-1000 ${showTerms ? 'blur-2xl scale-95' : 'blur-0 scale-100'}`}>
 
-
-
-                        <header className="text-center mb-16 select-none relative">
-
-
+                        <header className="text-center mb-16 select-none relative mt-10 md:mt-0">
 
                             <h1 onClick={() => {const c=secretClicks+1; setSecretClicks(c); if(c===5) setView('admin');}} 
 
-
-
                                 className="fame-font text-8xl font-black italic gold-text mb-4 tracking-tighter drop-shadow-[0_0_20px_rgba(212,175,55,0.4)] cursor-default active:scale-95 transition-transform">FAME 30</h1>
-
-
 
                             <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto">
 
-
-
                                 {[{v:timeLeft.d,l:'Dni'},{v:timeLeft.h,l:'Godz'},{v:timeLeft.m,l:'Min'},{v:timeLeft.s,l:'Sek'}].map(t=>(
-
-
 
                                     <div key={t.l} className="timer-box p-3 rounded-xl border border-zinc-800/50">
 
-
-
                                         <div className="text-2xl font-black fame-font italic text-white">{t.v}</div>
-
-
 
                                         <div className="text-[9px] uppercase text-zinc-500 font-black tracking-widest">{t.l}</div>
 
-
-
                                     </div>
-
-
 
                                 ))}
 
-
-
                             </div>
-
-
 
                             <p className="text-center text-zinc-500 text-[10px] mt-6 uppercase font-black tracking-widest animate-pulse">
 
-
-
                                 Dołączyło już: <span className="gold-text">{totalBets}</span> graczy
 
-
-
                             </p>
-
-
 
                         </header>
 
 
 
-
-
-
-
                         {userBet ? (
-
-
 
                             <div className="space-y-8 animate-in slide-in-from-bottom duration-700">
 
-
-
-                                <div className="text-center">
-
-
-
-                                    {winStatus === 'WAITING' && <div className="bg-yellow-500/10 border border-yellow-500/30 p-8 rounded-3xl"><div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div><h2 className="fame-font gold-text text-2xl italic uppercase">Kupon w grze...</h2><p className="text-zinc-500 text-[10px] mt-2 font-bold uppercase tracking-widest">Czekamy na oficjalne wyniki walk.</p></div>}
-
-
-
-                                    {winStatus === 'WIN' && <div className="bg-green-500/20 border-2 border-green-500 p-8 rounded-3xl shadow-[0_0_40px_rgba(34,197,94,0.2)]"><h2 className="fame-font text-green-500 text-4xl italic uppercase mb-2">WYGRAŁEŚ! 🏆</h2><p className="bg-green-500 text-black inline-block px-4 py-2 rounded-lg font-black text-xs uppercase tracking-widest">ZGŁOŚ SIĘ PO NAGRODĘ!</p></div>}
-
-
-
-                                    {winStatus === 'LOSE' && <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-3xl"><h2 className="fame-font text-red-500 text-3xl italic uppercase opacity-60">Kupon Przegrany</h2></div>}
-
-
-
+                                <div className="bg-yellow-500/10 border border-yellow-500/30 p-8 rounded-3xl mb-6 flex flex-col items-center shadow-[0_0_30px_rgba(212,175,55,0.05)]">
+                                    <h2 className="fame-font text-zinc-400 text-sm tracking-widest italic uppercase mb-4">Twój Stan Konta</h2>
+                                    <div className="flex items-center gap-4">
+                                        <div className="f30-coin" style={{width: '40px', height: '40px', fontSize: '12px'}}>F30</div>
+                                        <span className="text-5xl font-black text-white fame-font">{userCurrentBalance}</span>
+                                    </div>
+                                    {winStatus === 'WAITING' && <p className="text-yellow-500/70 text-[10px] mt-6 font-bold uppercase tracking-widest flex items-center gap-2"><div className="w-3 h-3 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div> Czekamy na oficjalne wyniki walk...</p>}
+                                    {winStatus === 'WIN' && <p className="text-green-500 text-[12px] mt-6 font-black uppercase tracking-widest bg-green-500/20 px-4 py-2 rounded-lg border border-green-500">Idealny kupon! Zgłoś się po nagrodę główną!</p>}
                                 </div>
-
-
-
-
 
 
 
                                 <div id="ticket" className="ticket-gradient p-10 rounded-[50px] border-2 border-yellow-500 relative overflow-hidden shadow-2xl">
 
-
-
                                     <div className="absolute top-0 right-0 p-6 opacity-5 fame-font text-6xl italic">F30</div>
-
-
 
                                     <h2 className="fame-font gold-text text-xl mb-8 uppercase italic tracking-[0.3em] text-center">KUPON ZAPISANY</h2>
 
-
-
                                     <p className="text-3xl font-black fame-font text-white mb-8 uppercase italic text-center underline decoration-yellow-500/30">{userBet.nick}</p>
-
-
 
                                     <div className="space-y-3">
 
-
-
                                         {FIGHTS.map(f => {
 
-
-
                                             const res = officialResults[f.id];
+                                            const userPick = userBet.picks[f.id];
+                                            const fighterName = userPick?.fighter || userPick;
+                                            const stake = userPick?.stake || 0;
 
-
-
-                                            const isCorrect = res ? (res === userBet.picks[f.id]) : null;
-
-
+                                            const isCorrect = res ? (res === fighterName) : null;
 
                                             return (
 
+                                                <div key={f.id} className="flex justify-between items-center border-b border-zinc-800/50 pb-3 pt-2 px-4 italic">
 
+                                                    <span className="text-zinc-600 text-[10px] font-bold uppercase w-1/3">{f.cat}</span>
 
-                                                <div key={f.id} className="flex justify-between border-b border-zinc-800/50 pb-2 px-4 italic">
-
-
-
-                                                    <span className="text-zinc-600 text-[10px] font-bold uppercase">{f.cat}</span>
-
-
-
-                                                    <span className={`text-[10px] font-black uppercase tracking-tighter ${isCorrect===true?'text-green-500':isCorrect===false?'text-red-500':'gold-text'}`}>{userBet.picks[f.id]}</span>
-
-
+                                                    <span className={`text-[11px] font-black uppercase tracking-tighter text-right w-2/3 flex flex-col items-end gap-1 ${isCorrect===true?'text-green-500':isCorrect===false?'text-red-500':'gold-text'}`}>
+                                                        {fighterName}
+                                                        <span className="opacity-60 text-[8px] tracking-widest font-bold text-zinc-400">STAWKA: {stake} FC</span>
+                                                    </span>
 
                                                 </div>
 
-
-
                                             );
-
-
 
                                         })}
 
-
-
                                     </div>
-
-
 
                                     <div className="mt-10 text-[8px] text-zinc-600 font-black tracking-[0.8em] uppercase opacity-40 text-center">RESTREAM WERYFIKACJA</div>
 
-
-
                                 </div>
-
-
 
                                 <button onClick={() => html2canvas(document.getElementById('ticket'), {backgroundColor:'#050505'}).then(c => { const a = document.createElement('a'); a.download=`WYNIK_${userBet.nick}.png`; a.href=c.toDataURL(); a.click(); })} className="w-full btn-gold py-6 rounded-3xl text-sm font-black uppercase shadow-xl animate-gold">Pobierz Dowód (PNG)</button>
 
-
-
                             </div>
-
-
 
                         ) : (
 
-
-
                             <form onSubmit={submitBets} className="space-y-6">
-
-
 
                                 <div className="card-bg p-8 rounded-3xl border border-zinc-800/50 shadow-inner">
 
-
-
                                     <label className="block text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] text-center mb-4 italic">Twój Nick Discord</label>
-
-
 
                                     <input required className="w-full bg-black border border-zinc-800 p-5 rounded-2xl text-center text-xl font-bold focus:border-yellow-500 outline-none uppercase text-white tracking-widest transition-all" placeholder="NICK#0000" value={nick} onChange={e=>setNick(e.target.value.toUpperCase())} />
 
-
-
                                 </div>
-
-
-
-
 
 
 
                                 <div className="space-y-4">
 
+                                    {FIGHTS.map(f => {
+                                        const currentPick = picks[f.id];
+                                        return (
 
+                                            <div key={f.id} className="card-bg p-6 rounded-3xl border border-zinc-800/30 hover:border-zinc-700 transition-colors group">
 
-                                    {FIGHTS.map(f => (
+                                                <p className="text-center text-[9px] text-zinc-500 font-bold mb-5 uppercase tracking-[0.4em] italic group-hover:text-yellow-500 transition-colors">{f.cat}</p>
 
+                                                <div className="grid grid-cols-2 gap-4">
 
+                                                    {[f.p1, f.p2].map(p => {
+                                                        const isSelected = currentPick?.fighter === p;
+                                                        return (
 
-                                        <div key={f.id} className="card-bg p-6 rounded-3xl border border-zinc-800/30 hover:border-zinc-700 transition-colors group">
+                                                            <button key={p} type="button" onClick={() => handlePick(f.id, p)} 
 
+                                                                className={`py-6 rounded-2xl font-black text-xs transition-all border-2 flex flex-col items-center justify-center gap-2 ${isSelected ? 'btn-gold border-white scale-[1.05] shadow-lg shadow-yellow-500/20' : 'bg-black border-zinc-900 text-zinc-700 hover:border-zinc-700'}`}>
+                                                                {p.toUpperCase()}
+                                                                {isSelected && <span className="text-[9px] bg-black/20 px-2 py-1 rounded-full">WYBRANO</span>}
+                                                            </button>
 
+                                                        );
+                                                    })}
 
-                                            <p className="text-center text-[9px] text-zinc-500 font-bold mb-5 uppercase tracking-[0.4em] italic group-hover:text-yellow-500 transition-colors">{f.cat}</p>
+                                                </div>
 
-
-
-                                            <div className="grid grid-cols-2 gap-4">
-
-
-
-                                                {[f.p1, f.p2].map(p => (
-
-
-
-                                                    <button key={p} type="button" onClick={() => handlePick(f.id, p)} 
-
-
-
-                                                        className={`py-6 rounded-2xl font-black text-xs transition-all border-2 ${picks[f.id]===p ? 'btn-gold border-white scale-[1.05] shadow-lg shadow-yellow-500/20' : 'bg-black border-zinc-900 text-zinc-700 hover:border-zinc-700'}`}>{p.toUpperCase()}</button>
-
-
-
-                                                ))}
-
-
+                                                {currentPick && (
+                                                    <div className="mt-6 p-4 bg-black/40 rounded-2xl border border-zinc-800/50 animate-in fade-in slide-in-from-top-2">
+                                                        <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-3">
+                                                            <span className="text-zinc-400">Stawka: <span className="text-yellow-500">{currentPick.stake} FC</span></span>
+                                                            <span className="text-zinc-400">Wygrana: <span className="text-green-500">+{currentPick.stake * 2} FC</span></span>
+                                                        </div>
+                                                        <input 
+                                                            type="range" 
+                                                            min="0" 
+                                                            max={remainingBalance + currentPick.stake} 
+                                                            step="10"
+                                                            value={currentPick.stake} 
+                                                            onChange={(e) => {
+                                                                const val = parseInt(e.target.value);
+                                                                setPicks(prev => ({...prev, [f.id]: {...prev[f.id], stake: val}}));
+                                                            }}
+                                                            className="fc-slider" 
+                                                        />
+                                                    </div>
+                                                )}
 
                                             </div>
 
-
-
-                                        </div>
-
-
-
-                                    ))}
-
-
+                                        );
+                                    })}
 
                                 </div>
 
 
 
-
-
-
-
                                 <button type="submit" disabled={status==='loading'} className="w-full btn-gold py-8 rounded-[40px] text-2xl font-black italic shadow-2xl uppercase tracking-tighter animate-gold disabled:opacity-50 mt-10">
-
-
 
                                     {status === 'loading' ? 'WYSYŁANIE...' : 'ZATWIERDŹ KUPON'}
 
-
-
                                 </button>
 
-
-
                             </form>
-
-
 
                         )}
 
 
+                        {/* LEADERBOARD / TOP 10 */}
+                        <div className="mt-20 card-bg p-8 rounded-3xl border border-yellow-500/20 shadow-2xl relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-50"></div>
+                            <h2 className="fame-font gold-text text-3xl mb-8 text-center italic uppercase flex items-center justify-center gap-4 drop-shadow-[0_0_10px_rgba(212,175,55,0.2)]">
+                                <div className="f30-coin" style={{width:'28px',height:'28px',fontSize:'9px'}}>F30</div>
+                                TOP 10 BOGACZY
+                                <div className="f30-coin" style={{width:'28px',height:'28px',fontSize:'9px'}}>F30</div>
+                            </h2>
+                            <div className="space-y-3 relative z-10">
+                                {leaderboard.length === 0 ? (
+                                    <p className="text-center text-zinc-500 text-xs uppercase italic font-bold">Brak danych...</p>
+                                ) : (
+                                    leaderboard.map((user, idx) => (
+                                        <div key={idx} className="flex justify-between items-center bg-black/60 p-4 rounded-2xl border border-zinc-800/80 hover:border-yellow-500/30 transition-colors">
+                                            <div className="flex items-center gap-4">
+                                                <span className={`fame-font text-xl italic font-black ${idx === 0 ? 'text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]' : idx === 1 ? 'text-zinc-300' : idx === 2 ? 'text-amber-700' : 'text-zinc-600'}`}>#{idx + 1}</span>
+                                                <span className="text-white font-bold uppercase tracking-wider text-sm">{user.nick}</span>
+                                            </div>
+                                            <span className="gold-text font-black flex items-center gap-2 text-lg">
+                                                {user.balance} <div className="f30-coin" style={{width:'18px',height:'18px',fontSize:'6px'}}>F30</div>
+                                            </span>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
 
                         
 
-
-
                         <footer className="mt-20 text-center opacity-20">
-
-
 
                             <p className="text-[8px] fame-font tracking-[1em] uppercase select-none italic">RESTREAM © 2026</p>
 
-
-
                         </footer>
-
-
 
                     </div>
 
-
-
                 </div>
 
-
-
             );
-
-
 
         }
 
 
 
-
-
-
-
         const root = ReactDOM.createRoot(document.getElementById('root'));
-
-
 
         root.render(<App />);
 
-
-
     </script>
 
-
-
 </body>
-
-
 
 </html>
