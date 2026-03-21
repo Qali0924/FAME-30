@@ -128,88 +128,6 @@
             background: linear-gradient(45deg, #d4af37, #f4cf57); cursor: pointer; box-shadow: 0 0 10px rgba(212,175,55,0.7);
         }
 
-        .nav-tab {
-            transition: all 0.3s ease;
-            position: relative;
-        }
-        .nav-tab.active {
-            color: #d4af37;
-        }
-        .nav-tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: #d4af37;
-            box-shadow: 0 0 10px #d4af37;
-        }
-
-        @keyframes case-spin {
-            0% { transform: scale(1); filter: blur(0px); }
-            50% { transform: scale(1.1); filter: blur(2px); }
-            100% { transform: scale(1); filter: blur(0px); }
-        }
-        .spinning {
-            animation: case-spin 0.2s infinite;
-        }
-
-        /* FUT KARTY CSS */
-        .fut-card {
-            aspect-ratio: 2.5 / 3.5;
-            position: relative;
-            border-radius: 12px;
-            overflow: hidden;
-            background-color: #1a1a1a;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            background-size: cover;
-            background-position: center;
-        }
-        .fut-card:hover {
-            transform: translateY(-10px) scale(1.05);
-            z-index: 10;
-        }
-        .fut-gradient-overlay {
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            height: 60%;
-            background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.8) 40%, rgba(0,0,0,0) 100%);
-            z-index: 1;
-        }
-        .fut-content {
-            position: relative;
-            z-index: 2;
-            padding: 10px;
-            text-align: center;
-        }
-        /* Rzadkości Kart */
-        .rarity-BRONZE { border: 2px solid #8B4513; box-shadow: 0 0 10px rgba(139, 69, 19, 0.4); }
-        .rarity-SILVER { border: 2px solid #C0C0C0; box-shadow: 0 0 15px rgba(192, 192, 192, 0.5); }
-        .rarity-GOLD { border: 3px solid #FFD700; box-shadow: 0 0 20px rgba(255, 215, 0, 0.6); }
-        .rarity-LEGEND { 
-            border: 4px solid #ff0000; 
-            box-shadow: 0 0 30px rgba(255, 0, 0, 0.8), inset 0 0 20px rgba(255, 0, 0, 0.5); 
-            animation: pulse-legend 2s infinite;
-        }
-        @keyframes pulse-legend {
-            0%, 100% { box-shadow: 0 0 30px rgba(255, 0, 0, 0.8), inset 0 0 20px rgba(255, 0, 0, 0.5); border-color: #ff0000; }
-            50% { box-shadow: 0 0 50px rgba(255, 0, 255, 1), inset 0 0 40px rgba(255, 0, 255, 0.8); border-color: #ff00ff; }
-        }
-
-        .pack-shake {
-            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both infinite;
-        }
-        @keyframes shake {
-            10%, 90% { transform: translate3d(-2px, 0, 0); }
-            20%, 80% { transform: translate3d(4px, 0, 0); }
-            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
-            40%, 60% { transform: translate3d(6px, 0, 0); }
-        }
-
     </style>
 
 </head>
@@ -269,46 +187,38 @@
         };
 
 
-        // DODANO ID ZDJĘĆ DO KODU (p1Id = obrazek 1.png, p2Id = obrazek 2.png)
+
         const FIGHTS = [
 
-            { id: 1, p1: 'Monika Weitz', p1Id: 1, p2: 'Wiktoria Zagacka', p2Id: 2, cat: 'BOKS' },
+            { id: 1, p1: 'Monika Weitz', p2: 'Wiktoria Zagacka', cat: 'BOKS' },
 
-            { id: 2, p1: 'Krystian Jakiel', p1Id: 3, p2: 'Piotr Szewc', p2Id: 4, cat: 'BOKS' },
+            { id: 2, p1: 'Krystian Jakiel', p2: 'Piotr Szewc', cat: 'BOKS' },
 
-            { id: 3, p1: 'Oskar Wierzejski', p1Id: 5, p2: 'Klaudiusz Mazanowski', p2Id: 6, cat: 'MMA' },
+            { id: 3, p1: 'Oskar Wierzejski', p2: 'Klaudiusz Mazanowski', cat: 'MMA' },
 
-            { id: 4, p1: 'Michał Pasternak', p1Id: 7, p2: 'Michał Królik', p2Id: 8, cat: 'BOKS' },
+            { id: 4, p1: 'Michał Pasternak', p2: 'Michał Królik', cat: 'BOKS' },
 
-            { id: 5, p1: 'Nikola Biela', p1Id: 12, p2: 'Żaneta Koloska', p2Id: 11, cat: 'K-1' },
+            { id: 5, p1: 'Nikola Biela', p2: 'Żaneta Koloska', cat: 'K-1' },
 
-            { id: 6, p1: 'Łukasz Pawłowski', p1Id: 9, p2: 'Nikodem Sławik', p2Id: 10, cat: 'K-1 / MMA' },
+            { id: 6, p1: 'Łukasz Pawłowski', p2: 'Nikodem Sławik', cat: 'K-1 / MMA' },
 
-            { id: 7, p1: 'Robert Karaś', p1Id: 15, p2: 'Kasper Gutkowski', p2Id: 16, cat: 'BOKS / K-1' },
+            { id: 7, p1: 'Robert Karaś', p2: 'Kasper Gutkowski', cat: 'BOKS / K-1' },
 
-            { id: 8, p1: 'Krzyżanowski/Bazyluk', p1Id: 17, p2: 'Stępień/Fares', p2Id: 18, cat: '2vs2 MMA/BOKS' },
+            { id: 8, p1: 'Krzyżanowski/Bazyluk', p2: 'Stępień/Fares', cat: '2vs2 MMA/BOKS' },
 
-            { id: 9, p1: 'Marta Linkiewicz', p1Id: 19, p2: 'Izabela Badurek', p2Id: 20, cat: 'K-1' },
+            { id: 9, p1: 'Marta Linkiewicz', p2: 'Izabela Badurek', cat: 'K-1' },
 
-            { id: 10, p1: 'Alan Kwieciński', p1Id: 13, p2: 'Michał Skowronek', p2Id: 14, cat: 'K-1' },
+            { id: 10, p1: 'Alan Kwieciński', p2: 'Michał Skowronek', cat: 'K-1' },
 
-            { id: 11, p1: 'Maksymilian Wiewiórka', p1Id: 21, p2: 'Alberto Simao', p2Id: 22, cat: 'MMA' },
+            { id: 11, p1: 'Maksymilian Wiewiórka', p2: 'Alberto Simao', cat: 'MMA' },
 
-            { id: 12, p1: 'Denis Załęcki', p1Id: 23, p2: 'Bartosz Szachta', p2Id: 24, cat: 'K-1' },
+            { id: 12, p1: 'Denis Załęcki', p2: 'Bartosz Szachta', cat: 'K-1' },
 
-            { id: 13, p1: 'Jakub Flas', p1Id: 25, p2: 'Akop Szostak', p2Id: 26, cat: 'BOKS' },
+            { id: 13, p1: 'Jakub Flas', p2: 'Akop Szostak', cat: 'BOKS' },
 
-            { id: 14, p1: 'Makhmud Muradov', p1Id: 27, p2: 'Denis Labryga', p2Id: 28, cat: 'MAIN EVENT K-1' }
+            { id: 14, p1: 'Makhmud Muradov', p2: 'Denis Labryga', cat: 'MAIN EVENT K-1' }
 
         ];
-
-
-        // Lista wszystkich zawodników do paczek FUT
-        const ALL_FIGHTERS = [];
-        FIGHTS.forEach(f => {
-            ALL_FIGHTERS.push({ name: f.p1, imgId: f.p1Id });
-            ALL_FIGHTERS.push({ name: f.p2, imgId: f.p2Id });
-        });
 
 
 
@@ -345,18 +255,6 @@
             const [allBets, setAllBets] = useState([]);
 
             const [isBettingLocked, setIsBettingLocked] = useState(false);
-
-            // ZAKŁADKI: ticket | store | cases | fut
-            const [currentTab, setCurrentTab] = useState('ticket'); 
-            const [isSpinning, setIsSpinning] = useState(false);
-            const [spinResult, setSpinResult] = useState(null);
-
-            const [adminSelectedUser, setAdminSelectedUser] = useState('');
-            const [adminFcAmount, setAdminFcAmount] = useState('');
-
-            // STANY DLA FUT
-            const [isOpeningPack, setIsOpeningPack] = useState(false);
-            const [pulledCard, setPulledCard] = useState(null);
 
 
 
@@ -463,7 +361,7 @@
 
                 setShowTerms(false);
 
-                showNotify(userBet ? "Witaj ponownie!" : "Powodzenia w typowaniu!");
+                showNotify(userBet ? "Witaj ponownie! Kupon aktywny." : "Powodzenia w typowaniu!");
 
             };
 
@@ -481,6 +379,7 @@
 
 
 
+            // LOGOWANIE ADMINA
             const handleAdminLogin = async () => {
                 const l = document.getElementById('l').value;
                 const p = document.getElementById('p').value;
@@ -499,27 +398,6 @@
                     }
                 } catch(e) {
                     alert('Błąd połączenia z bazą!');
-                }
-            };
-
-
-
-            const handleAdminAddFC = async () => {
-                if (!adminSelectedUser || !adminFcAmount) return alert('Wybierz gracza i wpisz kwotę!');
-                const amount = parseInt(adminFcAmount);
-                if (isNaN(amount)) return alert('Podaj poprawną liczbę!');
-
-                try {
-                    const user = allBets.find(b => b.id === adminSelectedUser);
-                    if (!user) return alert('Nie znaleziono gracza!');
-
-                    const currentMod = user.walletModifier || 0;
-                    await db.ref(`wszystkie_kupony/${adminSelectedUser}/walletModifier`).set(currentMod + amount);
-
-                    alert(`Pomyślnie zaktualizowano portfel gracza: ${user.nick} o ${amount} FC!`);
-                    setAdminFcAmount('');
-                } catch (e) {
-                    alert('Błąd bazy danych!');
                 }
             };
 
@@ -558,8 +436,7 @@
 
                         typy: picks,
 
-                        data: new Date().toISOString(),
-                        walletModifier: 0 
+                        data: new Date().toISOString()
 
                     });
 
@@ -612,47 +489,35 @@
 
 
 
-            // PORTFEL
             const userCurrentBalance = useMemo(() => {
                 if (!userBet) return 1000;
                 let bal = 1000;
-                
                 if(userBet.picks) {
                     Object.entries(userBet.picks).forEach(([fId, pickData]) => {
                         const stake = pickData.stake || 0;
                         const fighter = pickData.fighter || pickData;
                         bal -= stake;
                         
-                        if (officialResults[fId] === fighter) bal += (stake * 2); 
-                        else if (officialResults[fId] === 'REMIS') bal += stake; 
+                        if (officialResults[fId] === fighter) bal += (stake * 2); // Wygrał = Podwojenie
+                        else if (officialResults[fId] === 'REMIS') bal += stake; // Remis = Zwrot stawki
                     });
                 }
-
-                const userDbObj = allBets.find(b => b.nick === userBet.nick);
-                if (userDbObj && userDbObj.walletModifier) {
-                    bal += userDbObj.walletModifier;
-                }
-
                 return bal;
-            }, [userBet, officialResults, allBets]);
-
-            const userCardsCollection = useMemo(() => {
-                if (!userBet) return [];
-                const userDbObj = allBets.find(b => b.nick === userBet.nick);
-                if (userDbObj && userDbObj.cards) {
-                    return Object.values(userDbObj.cards).reverse(); // Najnowsze na górze
-                }
-                return [];
-            }, [userBet, allBets]);
+            }, [userBet, officialResults]);
 
             const winStatus = (() => {
+
                 if (!userBet) return null;
+
                 const settled = Object.keys(officialResults).length;
+
                 if (settled < FIGHTS.length) return 'WAITING';
+
                 return FIGHTS.every(f => {
                     const pick = userBet.picks[f.id]?.fighter || userBet.picks[f.id];
                     return officialResults[f.id] === pick || officialResults[f.id] === 'REMIS';
                 }) ? 'WIN' : 'LOSE';
+
             })();
 
 
@@ -669,8 +534,6 @@
                             else if (officialResults[fId] === 'REMIS') bal += stake;
                         });
                     }
-                    if (bet.walletModifier) bal += bet.walletModifier;
-
                     return { nick: bet.nick || 'Nieznany', balance: bal };
                 }).sort((a, b) => b.balance - a.balance).slice(0, 10);
             }, [allBets, officialResults]);
@@ -681,6 +544,7 @@
                 let p1Count = 0;
                 let p2Count = 0;
                 const f = FIGHTS.find(x => x.id === fightId);
+                
                 allBets.forEach(bet => {
                     if(bet.typy && bet.typy[fightId]) {
                         const pick = bet.typy[fightId].fighter || bet.typy[fightId];
@@ -694,83 +558,6 @@
                     p2: total ? Math.round((p2Count / total) * 100) : 0,
                     total
                 };
-            };
-
-
-            const modifyDatabaseWallet = async (amount) => {
-                const userDbObj = allBets.find(b => b.nick === userBet.nick);
-                if (userDbObj && userDbObj.id) {
-                    const currentMod = userDbObj.walletModifier || 0;
-                    await db.ref(`wszystkie_kupony/${userDbObj.id}/walletModifier`).set(currentMod + amount);
-                }
-            };
-
-            const handleBuyStoreItem = async (itemName, cost) => {
-                if (userCurrentBalance < cost) return showNotify("Masz za mało Famecoinów!");
-                
-                if (confirm(`Czy na pewno chcesz kupić: ${itemName} za ${cost} FC?`)) {
-                    await modifyDatabaseWallet(-cost);
-                    playSound('success');
-                    showNotify(`Zakupiono: ${itemName}! Zgłoś się na Discord.`);
-                    
-                    fetch(WEBHOOK_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            username: "FAME STORE",
-                            content: `🛒 **${userBet.nick}** właśnie kupił w sklepie: **${itemName}** za ${cost} FC!`
-                        })
-                    });
-                }
-            };
-
-
-            // LOGIKA FUT - OTWIERANIE PACZEK
-            const openFutPack = async () => {
-                const cost = 500;
-                if (isOpeningPack) return;
-                if (userCurrentBalance < cost) return showNotify("Masz za mało Famecoinów na paczkę!");
-
-                setIsOpeningPack(true);
-                setPulledCard(null);
-                playSound('click');
-
-                // Pobieramy kasę
-                await modifyDatabaseWallet(-cost);
-
-                // SYMULACJA OTWIERANIA
-                setTimeout(async () => {
-                    // Losowanie rzadkości
-                    const randRarity = Math.random();
-                    let rarity = 'BRONZE';
-                    if (randRarity > 0.95) rarity = 'LEGEND';
-                    else if (randRarity > 0.80) rarity = 'GOLD';
-                    else if (randRarity > 0.50) rarity = 'SILVER';
-
-                    // Losowanie zawodnika
-                    const randomFighter = ALL_FIGHTERS[Math.floor(Math.random() * ALL_FIGHTERS.length)];
-
-                    const newCard = {
-                        name: randomFighter.name,
-                        imgId: randomFighter.imgId,
-                        rarity: rarity,
-                        date: new Date().toISOString()
-                    };
-
-                    // Zapis do Firebase
-                    const userDbObj = allBets.find(b => b.nick === userBet.nick);
-                    if (userDbObj && userDbObj.id) {
-                        await db.ref(`wszystkie_kupony/${userDbObj.id}/cards`).push(newCard);
-                    }
-
-                    playSound('success');
-                    if(rarity === 'LEGEND' || rarity === 'GOLD') {
-                        confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });
-                    }
-
-                    setPulledCard(newCard);
-                    setIsOpeningPack(false);
-                }, 2500); // 2.5 sekundy trzęsienia paczki
             };
 
 
@@ -803,6 +590,7 @@
 
                                 <h2 className="fame-font gold-text text-3xl uppercase italic text-center drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]">PANEL ADMINA</h2>
                                 
+                                {/* SEKECJA 1: ZABLOKUJ OBSTAWIANIE */}
                                 <div className="card-bg p-6 rounded-3xl border border-zinc-800 shadow-xl">
                                     <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-widest mb-4">Status Obstawiania</h3>
                                     <button 
@@ -813,6 +601,7 @@
                                     </button>
                                 </div>
 
+                                {/* SEKCJA 2: STATYSTYKI & WYNIKI */}
                                 <div className="card-bg p-6 rounded-3xl border border-zinc-800 shadow-xl space-y-4">
                                     <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-widest mb-4">Wyniki Walk & Głosy Widzów</h3>
                                     <div className="space-y-4 max-h-[50vh] overflow-y-auto custom-scroll pr-2">
@@ -825,6 +614,7 @@
                                                         <span className="text-yellow-500 drop-shadow-md">Suma Głosów: {stats.total}</span>
                                                     </p>
                                                     
+                                                    {/* Pasek postępu */}
                                                     {stats.total > 0 && (
                                                         <div className="flex w-full h-1.5 bg-zinc-800 rounded-full mb-4 overflow-hidden shadow-inner">
                                                             <div style={{width: `${stats.p1}%`}} className="bg-yellow-500 h-full transition-all duration-1000"></div>
@@ -849,6 +639,7 @@
                                     </div>
                                 </div>
 
+                                {/* SEKCJA 3: ZARZĄDZANIE KUPONAMI */}
                                 <div className="card-bg p-6 rounded-3xl border border-zinc-800 shadow-xl">
                                     <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-widest mb-4 flex justify-between items-center">
                                         <span>Zarządzaj Kuponami (Wszystkie: {allBets.length})</span>
@@ -869,39 +660,6 @@
                                             </div>
                                         ))}
                                         {allBets.length === 0 && <p className="text-[10px] text-zinc-500 italic text-center py-4">Brak wpisów.</p>}
-                                    </div>
-                                </div>
-
-                                <div className="card-bg p-6 rounded-3xl border border-zinc-800 shadow-xl">
-                                    <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-widest mb-4">Bank Centralny (Dodaj/Odbierz FC)</h3>
-                                    <div className="space-y-4">
-                                        <select 
-                                            className="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-white outline-none focus:border-yellow-500 uppercase text-xs font-bold"
-                                            value={adminSelectedUser}
-                                            onChange={(e) => setAdminSelectedUser(e.target.value)}
-                                        >
-                                            <option value="">-- Wybierz Gracza --</option>
-                                            {allBets.map(bet => (
-                                                <option key={bet.id} value={bet.id}>{bet.nick}</option>
-                                            ))}
-                                        </select>
-                                        
-                                        <div className="flex gap-4">
-                                            <input 
-                                                type="number" 
-                                                placeholder="Ilość FC (np. 500 lub -200)" 
-                                                className="w-2/3 bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-white outline-none focus:border-yellow-500 font-bold text-center"
-                                                value={adminFcAmount}
-                                                onChange={(e) => setAdminFcAmount(e.target.value)}
-                                            />
-                                            <button 
-                                                onClick={handleAdminAddFC}
-                                                className="w-1/3 btn-gold rounded-xl font-black uppercase text-xs shadow-lg hover:scale-105 transition-transform"
-                                            >
-                                                Wykonaj
-                                            </button>
-                                        </div>
-                                        <p className="text-[9px] text-zinc-500 italic text-center">Podaj wartość na minusie (np. -500), aby zabrać FC ze stanu konta.</p>
                                     </div>
                                 </div>
 
@@ -944,7 +702,7 @@
 
                             onClick={() => setShowFighterCard(true)} 
 
-                            className="fixed left-0 top-1/2 -translate-y-1/2 z-[300] bg-zinc-900/90 border-r-2 border-y-2 border-yellow-500 p-4 rounded-r-2xl hover:bg-yellow-500 transition-all group shadow-2xl hidden md:block"
+                            className="fixed left-0 top-1/2 -translate-y-1/2 z-[300] bg-zinc-900/90 border-r-2 border-y-2 border-yellow-500 p-4 rounded-r-2xl hover:bg-yellow-500 transition-all group shadow-2xl"
 
                         >
 
@@ -971,6 +729,22 @@
                                 </div>
 
                             </div>
+
+                        </div>
+
+                    )}
+
+
+
+                    {showBuyBtn && (
+
+                        <div className="buy-popup">
+
+                            <a href={DISCORD_LINK} target="_blank" onClick={() => setShowBuyBtn(false)} className="btn-buy-anim px-10 py-5 rounded-full text-lg fame-font italic flex items-center gap-3">
+
+                                🚀 KUP RESTREAM GALI
+
+                            </a>
 
                         </div>
 
@@ -1006,7 +780,11 @@
                                     
                                     <p>• Wybieraj zawodników i decyduj o stawce za pomocą suwaka.</p>
 
-                                    <p>• Kupuj <b>Paczki Kart (FUT)</b> i buduj swój klaser legend!</p>
+                                    <p>• Trafiony typ <b>podwaja Twoją stawkę</b>.</p>
+
+                                    <p>• W przypadku <b>REMISU / NO CONTEST</b> kwota wraca do Ciebie.</p>
+
+                                    <p>• Aby wysłać kupon, musisz wytypować wynik wszystkich 14 walk.</p>
 
                                 </div>
 
@@ -1020,13 +798,13 @@
 
 
 
-                    <div className={`max-w-3xl mx-auto py-12 px-6 transition-all duration-1000 ${showTerms ? 'blur-2xl scale-95' : 'blur-0 scale-100'}`}>
+                    <div className={`max-w-2xl mx-auto py-12 px-6 transition-all duration-1000 ${showTerms ? 'blur-2xl scale-95' : 'blur-0 scale-100'}`}>
 
-                        <header className="text-center mb-10 select-none relative mt-10 md:mt-0">
+                        <header className="text-center mb-16 select-none relative mt-10 md:mt-0">
 
                             <h1 onClick={() => {const c=secretClicks+1; setSecretClicks(c); if(c===5) setView('admin');}} 
 
-                                className="fame-font text-6xl md:text-8xl font-black italic gold-text mb-4 tracking-tighter drop-shadow-[0_0_20px_rgba(212,175,55,0.4)] cursor-default active:scale-95 transition-transform">FAME 30</h1>
+                                className="fame-font text-8xl font-black italic gold-text mb-4 tracking-tighter drop-shadow-[0_0_20px_rgba(212,175,55,0.4)] cursor-default active:scale-95 transition-transform">FAME 30</h1>
 
                             <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto">
 
@@ -1034,7 +812,7 @@
 
                                     <div key={t.l} className="timer-box p-3 rounded-xl border border-zinc-800/50">
 
-                                        <div className="text-xl md:text-2xl font-black fame-font italic text-white">{t.v}</div>
+                                        <div className="text-2xl font-black fame-font italic text-white">{t.v}</div>
 
                                         <div className="text-[9px] uppercase text-zinc-500 font-black tracking-widest">{t.l}</div>
 
@@ -1044,180 +822,83 @@
 
                             </div>
 
+                            <p className="text-center text-zinc-500 text-[10px] mt-6 uppercase font-black tracking-widest animate-pulse">
+
+                                Dołączyło już: <span className="gold-text">{totalBets}</span> graczy
+
+                            </p>
+
                         </header>
 
 
 
                         {userBet ? (
 
-                            <div className="animate-in slide-in-from-bottom duration-700">
+                            <div className="space-y-8 animate-in slide-in-from-bottom duration-700">
 
-                                <div className="flex justify-center flex-wrap gap-4 md:gap-6 mb-8 border-b border-zinc-800/50 pb-4 uppercase tracking-widest text-xs font-black fame-font italic">
-                                    <button onClick={() => {playSound('click'); setCurrentTab('ticket');}} className={`nav-tab px-4 py-2 ${currentTab === 'ticket' ? 'active' : 'text-zinc-500 hover:text-white'}`}>Mój Kupon</button>
-                                    <button onClick={() => {playSound('click'); setCurrentTab('fut');}} className={`nav-tab px-4 py-2 flex items-center gap-2 ${currentTab === 'fut' ? 'active' : 'text-zinc-500 hover:text-white'}`}>🃏 KARTY</button>
-                                    <button onClick={() => {playSound('click'); setCurrentTab('store');}} className={`nav-tab px-4 py-2 flex items-center gap-2 ${currentTab === 'store' ? 'active' : 'text-zinc-500 hover:text-white'}`}>🛒 Sklep</button>
+                                <div className="bg-yellow-500/10 border border-yellow-500/30 p-8 rounded-3xl mb-6 flex flex-col items-center shadow-[0_0_30px_rgba(212,175,55,0.05)]">
+                                    <h2 className="fame-font text-zinc-400 text-sm tracking-widest italic uppercase mb-4">Twój Stan Konta</h2>
+                                    <div className="flex items-center gap-4">
+                                        <div className="f30-coin" style={{width: '40px', height: '40px', fontSize: '12px'}}>F30</div>
+                                        <span className="text-5xl font-black text-white fame-font">{userCurrentBalance}</span>
+                                    </div>
+                                    {winStatus === 'WAITING' && <p className="text-yellow-500/70 text-[10px] mt-6 font-bold uppercase tracking-widest flex items-center gap-2"><div className="w-3 h-3 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div> Czekamy na oficjalne wyniki walk...</p>}
+                                    {winStatus === 'WIN' && <p className="text-green-500 text-[12px] mt-6 font-black uppercase tracking-widest bg-green-500/20 px-4 py-2 rounded-lg border border-green-500">Idealny kupon! Zgłoś się po nagrodę główną!</p>}
                                 </div>
 
 
-                                {/* KUPON */}
-                                {currentTab === 'ticket' && (
-                                    <div className="space-y-8 animate-in fade-in">
-                                        <div className="bg-yellow-500/10 border border-yellow-500/30 p-8 rounded-3xl flex flex-col items-center shadow-[0_0_30px_rgba(212,175,55,0.05)]">
-                                            <h2 className="fame-font text-zinc-400 text-sm tracking-widest italic uppercase mb-4">Twój Stan Konta</h2>
-                                            <div className="flex items-center gap-4">
-                                                <div className="f30-coin" style={{width: '40px', height: '40px', fontSize: '12px'}}>F30</div>
-                                                <span className="text-5xl font-black text-white fame-font">{userCurrentBalance}</span>
-                                            </div>
-                                            {winStatus === 'WAITING' && <p className="text-yellow-500/70 text-[10px] mt-6 font-bold uppercase tracking-widest flex items-center gap-2"><div className="w-3 h-3 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div> Czekamy na wyniki walk...</p>}
-                                        </div>
 
-                                        <div id="ticket" className="ticket-gradient p-6 md:p-10 rounded-[40px] border-2 border-yellow-500 relative overflow-hidden shadow-2xl">
-                                            <div className="absolute top-0 right-0 p-6 opacity-5 fame-font text-6xl italic">F30</div>
-                                            <h2 className="fame-font gold-text text-xl mb-6 uppercase italic tracking-[0.3em] text-center">KUPON ZAPISANY</h2>
-                                            <p className="text-2xl md:text-3xl font-black fame-font text-white mb-8 uppercase italic text-center underline decoration-yellow-500/30">{userBet.nick}</p>
-                                            
-                                            <div className="space-y-3">
-                                                {FIGHTS.map(f => {
-                                                    const res = officialResults[f.id];
-                                                    const userPick = userBet.picks[f.id];
-                                                    const fighterName = userPick?.fighter || userPick;
-                                                    const stake = userPick?.stake || 0;
+                                <div id="ticket" className="ticket-gradient p-10 rounded-[50px] border-2 border-yellow-500 relative overflow-hidden shadow-2xl">
 
-                                                    let isCorrect = null;
-                                                    if (res) {
-                                                        if (res === fighterName) isCorrect = true;
-                                                        else if (res === 'REMIS') isCorrect = 'REMIS';
-                                                        else isCorrect = false;
-                                                    }
-                                                    const statusColor = isCorrect === true ? 'text-green-500' : isCorrect === 'REMIS' ? 'text-zinc-400' : isCorrect === false ? 'text-red-500' : 'gold-text';
+                                    <div className="absolute top-0 right-0 p-6 opacity-5 fame-font text-6xl italic">F30</div>
 
-                                                    return (
-                                                        <div key={f.id} className="flex justify-between items-center border-b border-zinc-800/50 pb-3 pt-2 px-2 md:px-4 italic">
-                                                            <span className="text-zinc-600 text-[9px] md:text-[10px] font-bold uppercase w-1/3">{f.cat}</span>
-                                                            <span className={`text-[10px] md:text-[11px] font-black uppercase tracking-tighter text-right w-2/3 flex flex-col items-end gap-1 ${statusColor}`}>
-                                                                {fighterName} {isCorrect === 'REMIS' && <span className="text-[8px] bg-zinc-800 px-1 rounded ml-1 text-white">REMIS</span>}
-                                                                <span className="opacity-60 text-[8px] tracking-widest font-bold text-zinc-400">STAWKA: {stake} FC</span>
-                                                            </span>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
+                                    <h2 className="fame-font gold-text text-xl mb-8 uppercase italic tracking-[0.3em] text-center">KUPON ZAPISANY</h2>
 
+                                    <p className="text-3xl font-black fame-font text-white mb-8 uppercase italic text-center underline decoration-yellow-500/30">{userBet.nick}</p>
 
-                                {/* KARTY FUT */}
-                                {currentTab === 'fut' && (
-                                    <div className="space-y-10 animate-in fade-in slide-in-from-left-10 duration-500">
-                                        
-                                        <div className="text-center mb-6">
-                                            <h2 className="text-4xl fame-font italic text-blue-500 mb-2 drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]">KARTY ZAWODNIKÓW</h2>
-                                            <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest">Kupuj paczki i zbieraj rzadkie legendy z FAME!</p>
-                                        </div>
+                                    <div className="space-y-3">
 
-                                        {/* PACZKA DO KUPIENIA */}
-                                        <div className="flex flex-col items-center">
-                                            <div className="relative mb-6">
-                                                <div className={`w-40 h-56 bg-gradient-to-b from-blue-900 to-black border-4 border-blue-500 rounded-xl shadow-[0_0_30px_rgba(59,130,246,0.3)] flex flex-col items-center justify-center cursor-pointer ${isOpeningPack ? 'pack-shake' : 'hover:scale-105 transition-transform'}`} onClick={openFutPack}>
-                                                    <span className="text-4xl drop-shadow-lg mb-2">📦</span>
-                                                    <span className="fame-font text-white font-black italic text-xl">PACZKA</span>
-                                                    <span className="text-[10px] text-blue-300 font-bold uppercase mt-1">FAME 30</span>
+                                        {FIGHTS.map(f => {
+
+                                            const res = officialResults[f.id];
+                                            const userPick = userBet.picks[f.id];
+                                            const fighterName = userPick?.fighter || userPick;
+                                            const stake = userPick?.stake || 0;
+
+                                            let isCorrect = null;
+                                            if (res) {
+                                                if (res === fighterName) isCorrect = true;
+                                                else if (res === 'REMIS') isCorrect = 'REMIS';
+                                                else isCorrect = false;
+                                            }
+
+                                            const statusColor = isCorrect === true ? 'text-green-500' : isCorrect === 'REMIS' ? 'text-zinc-400' : isCorrect === false ? 'text-red-500' : 'gold-text';
+
+                                            return (
+
+                                                <div key={f.id} className="flex justify-between items-center border-b border-zinc-800/50 pb-3 pt-2 px-4 italic">
+
+                                                    <span className="text-zinc-600 text-[10px] font-bold uppercase w-1/3">{f.cat}</span>
+
+                                                    <span className={`text-[11px] font-black uppercase tracking-tighter text-right w-2/3 flex flex-col items-end gap-1 ${statusColor}`}>
+                                                        {fighterName} {isCorrect === 'REMIS' && <span className="text-[8px] bg-zinc-800 px-1 rounded ml-1 text-white">REMIS/ZWROT</span>}
+                                                        <span className="opacity-60 text-[8px] tracking-widest font-bold text-zinc-400">STAWKA: {stake} FC</span>
+                                                    </span>
+
                                                 </div>
-                                            </div>
-                                            
-                                            <button onClick={openFutPack} disabled={isOpeningPack} className="bg-blue-600 border border-blue-400 text-white py-3 px-8 rounded-full text-xs font-black uppercase tracking-widest shadow-lg hover:bg-blue-500 disabled:opacity-50 transition-colors flex items-center gap-2">
-                                                {isOpeningPack ? 'OTWIERANIE...' : 'KUP PACZKĘ ZA 500'} <div className="f30-coin" style={{width:'14px',height:'14px',fontSize:'5px'}}>F30</div>
-                                            </button>
-                                        </div>
 
-                                        {/* WYNIK OTWIERANIA */}
-                                        {pulledCard && (
-                                            <div className="fixed inset-0 z-[600] flex flex-col items-center justify-center p-4 blur-bg animate-in zoom-in duration-300">
-                                                <h3 className="fame-font text-3xl text-white italic mb-6 uppercase drop-shadow-md">Trafiasz Kartę!</h3>
-                                                <div className={`fut-card rarity-${pulledCard.rarity} w-64 md:w-80 shadow-2xl relative mb-8`} style={{backgroundImage: `url(${pulledCard.imgId}.png)`}}>
-                                                    <div className="fut-gradient-overlay"></div>
-                                                    <div className="fut-content w-full absolute bottom-0 pb-4">
-                                                        <div className="fame-font text-center text-white text-2xl font-black italic uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">{pulledCard.name}</div>
-                                                        <div className={`text-[10px] font-bold uppercase tracking-widest text-center mt-1 ${pulledCard.rarity === 'BRONZE' ? 'text-orange-600' : pulledCard.rarity === 'SILVER' ? 'text-zinc-300' : pulledCard.rarity === 'GOLD' ? 'text-yellow-400' : 'text-red-500 animate-pulse'}`}>
-                                                            {pulledCard.rarity}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <button onClick={() => setPulledCard(null)} className="text-zinc-400 text-sm uppercase font-bold hover:text-white transition-colors border border-zinc-700 px-6 py-2 rounded-full">Dalej</button>
-                                            </div>
-                                        )}
+                                            );
 
-                                        <hr className="border-zinc-800/50" />
-
-                                        {/* KLASER GRACZA */}
-                                        <div>
-                                            <h3 className="text-zinc-500 text-xs font-black uppercase tracking-[0.3em] mb-6 italic text-center">TWÓJ KLASER KART ({userCardsCollection.length})</h3>
-                                            
-                                            {userCardsCollection.length === 0 ? (
-                                                <div className="text-center bg-black/30 p-10 rounded-2xl border border-zinc-800/50">
-                                                    <p className="text-zinc-600 text-xs uppercase font-bold italic">Brak kart w klaserze. Kup pierwszą paczkę!</p>
-                                                </div>
-                                            ) : (
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                                    {userCardsCollection.map((card, idx) => (
-                                                        <div key={idx} className={`fut-card rarity-${card.rarity}`} style={{backgroundImage: `url(${card.imgId}.png)`}}>
-                                                            <div className="fut-gradient-overlay"></div>
-                                                            <div className="fut-content pb-2">
-                                                                <div className="fame-font text-white text-sm md:text-md font-black italic uppercase drop-shadow-[0_2px_2px_rgba(0,0,0,1)] leading-tight">{card.name}</div>
-                                                                <div className={`text-[8px] font-bold uppercase tracking-widest mt-1 ${card.rarity === 'BRONZE' ? 'text-orange-600' : card.rarity === 'SILVER' ? 'text-zinc-300' : card.rarity === 'GOLD' ? 'text-yellow-400' : 'text-red-500'}`}>
-                                                                    {card.rarity}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
+                                        })}
 
                                     </div>
-                                )}
 
+                                    <div className="mt-10 text-[8px] text-zinc-600 font-black tracking-[0.8em] uppercase opacity-40 text-center">RESTREAM WERYFIKACJA</div>
 
-                                {/* SKLEP */}
-                                {currentTab === 'store' && (
-                                    <div className="space-y-6 animate-in fade-in slide-in-from-right-10 duration-500">
-                                        <div className="text-center mb-8">
-                                            <h2 className="text-3xl fame-font italic gold-text mb-2 drop-shadow-md">SKLEP FAME</h2>
-                                            <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest">Wymieniaj wygrane na nagrody</p>
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div className="card-bg p-6 rounded-3xl border border-zinc-800 hover:border-yellow-500/50 transition-colors flex flex-col items-center text-center shadow-lg relative overflow-hidden group">
-                                                <div className="absolute top-0 right-0 bg-yellow-500 text-black text-[8px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-widest">Premium</div>
-                                                <div className="text-4xl mb-4 mt-2">🎟️</div>
-                                                <h3 className="text-white font-black text-lg mb-2 uppercase">KUPON NA FAME 31</h3>
-                                                <p className="text-zinc-500 text-[10px] mb-6 min-h-[40px]">Zapewnij sobie darmowy dostęp do restreamu z kolejnej gali bez żadnych opłat!</p>
-                                                <button onClick={() => handleBuyStoreItem('DARMOWY KUPON FAME 31', 5000)} className="w-full btn-gold py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-md hover:scale-105 transition-transform flex justify-center items-center gap-2">
-                                                    Kup za 5000 <div className="f30-coin" style={{width:'14px',height:'14px',fontSize:'5px'}}>F30</div>
-                                                </button>
-                                            </div>
+                                </div>
 
-                                            <div className="card-bg p-6 rounded-3xl border border-zinc-800 hover:border-purple-500/50 transition-colors flex flex-col items-center text-center shadow-lg">
-                                                <div className="text-4xl mb-4 mt-2">🟣</div>
-                                                <h3 className="text-purple-400 font-black text-lg mb-2 uppercase drop-shadow-[0_0_10px_rgba(168,85,247,0.4)]">RANGA VIP (DISCORD)</h3>
-                                                <p className="text-zinc-500 text-[10px] mb-6 min-h-[40px]">Zdobądź unikalną rangę na serwerze i wyróżnij się na czacie podczas oglądania!</p>
-                                                <button onClick={() => handleBuyStoreItem('RANGA VIP DISCORD', 2500)} className="w-full bg-purple-600/20 text-purple-400 border border-purple-500/50 py-4 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-purple-600 hover:text-white transition-all flex justify-center items-center gap-2">
-                                                    Kup za 2500 <div className="f30-coin" style={{width:'14px',height:'14px',fontSize:'5px'}}>F30</div>
-                                                </button>
-                                            </div>
+                                <button onClick={() => html2canvas(document.getElementById('ticket'), {backgroundColor:'#050505'}).then(c => { const a = document.createElement('a'); a.download=`WYNIK_${userBet.nick}.png`; a.href=c.toDataURL(); a.click(); })} className="w-full btn-gold py-6 rounded-3xl text-sm font-black uppercase shadow-xl animate-gold">Pobierz Dowód (PNG)</button>
 
-                                            <div className="card-bg p-6 rounded-3xl border border-zinc-800 hover:border-blue-500/50 transition-colors flex flex-col items-center text-center shadow-lg md:col-span-2">
-                                                <div className="text-4xl mb-4 mt-2">🎨</div>
-                                                <h3 className="text-blue-400 font-black text-lg mb-2 uppercase drop-shadow-[0_0_10px_rgba(59,130,246,0.4)]">WŁASNY KOLOR NICKU</h3>
-                                                <p className="text-zinc-500 text-[10px] mb-6">Zmień kolor swojego nicku na naszym serwerze Discord na dowolny jaki chcesz.</p>
-                                                <button onClick={() => handleBuyStoreItem('WŁASNY KOLOR NICKU', 1000)} className="w-full max-w-sm bg-blue-600/20 text-blue-400 border border-blue-500/50 py-4 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex justify-center items-center gap-2 mx-auto">
-                                                    Kup za 1000 <div className="f30-coin" style={{width:'14px',height:'14px',fontSize:'5px'}}>F30</div>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
 
                         ) : isBettingLocked ? (
@@ -1310,12 +991,13 @@
                         )}
 
 
+                        {/* LEADERBOARD / TOP 10 */}
                         <div className="mt-20 card-bg p-8 rounded-3xl border border-yellow-500/20 shadow-2xl relative overflow-hidden">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-50"></div>
-                            <h2 className="fame-font gold-text text-2xl md:text-3xl mb-8 text-center italic uppercase flex items-center justify-center gap-4 drop-shadow-[0_0_10px_rgba(212,175,55,0.2)]">
-                                <div className="f30-coin hidden md:flex" style={{width:'28px',height:'28px',fontSize:'9px'}}>F30</div>
+                            <h2 className="fame-font gold-text text-3xl mb-8 text-center italic uppercase flex items-center justify-center gap-4 drop-shadow-[0_0_10px_rgba(212,175,55,0.2)]">
+                                <div className="f30-coin" style={{width:'28px',height:'28px',fontSize:'9px'}}>F30</div>
                                 TOP 10 BOGACZY
-                                <div className="f30-coin hidden md:flex" style={{width:'28px',height:'28px',fontSize:'9px'}}>F30</div>
+                                <div className="f30-coin" style={{width:'28px',height:'28px',fontSize:'9px'}}>F30</div>
                             </h2>
                             <div className="space-y-3 relative z-10">
                                 {leaderboard.length === 0 ? (
@@ -1325,9 +1007,9 @@
                                         <div key={idx} className="flex justify-between items-center bg-black/60 p-4 rounded-2xl border border-zinc-800/80 hover:border-yellow-500/30 transition-colors">
                                             <div className="flex items-center gap-4">
                                                 <span className={`fame-font text-xl italic font-black ${idx === 0 ? 'text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]' : idx === 1 ? 'text-zinc-300' : idx === 2 ? 'text-amber-700' : 'text-zinc-600'}`}>#{idx + 1}</span>
-                                                <span className="text-white font-bold uppercase tracking-wider text-xs md:text-sm">{user.nick}</span>
+                                                <span className="text-white font-bold uppercase tracking-wider text-sm">{user.nick}</span>
                                             </div>
-                                            <span className="gold-text font-black flex items-center gap-2 text-md md:text-lg">
+                                            <span className="gold-text font-black flex items-center gap-2 text-lg">
                                                 {user.balance} <div className="f30-coin" style={{width:'18px',height:'18px',fontSize:'6px'}}>F30</div>
                                             </span>
                                         </div>
