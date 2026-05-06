@@ -1,320 +1,1189 @@
 <!DOCTYPE html>
-
 <html lang="pl">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>OBSTAWIANIE | RESTREAM</title>
-
+    <title>OBSTAWIANIE | FAME 31</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <script src="https://cdn.tailwindcss.com"></script>
-
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Barlow:wght@400;600;700;900&display=swap" rel="stylesheet">
 
     <style>
+        :root {
+            --red: #E8002A;
+            --red-dark: #9B0019;
+            --red-deep: #5A000F;
+            --white: #FFFFFF;
+            --off-white: #F0EEEC;
+            --black: #080808;
+            --grey: #888;
+            --grey-light: #CCCCCC;
+        }
 
-        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow-x: hidden; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        .fame-font { font-family: 'Orbitron', sans-serif; }
+        body {
+            font-family: 'Barlow', sans-serif;
+            background-color: var(--black);
+            color: var(--white);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
 
-        .gold-text { color: #d4af37; }
-
-        .btn-gold { background: linear-gradient(45deg, #d4af37, #f4cf57); color: black; font-weight: 900; }
-
-        .card-bg { background: #0f0f0f; border: 1px solid #1a1a1a; }
-
-        .timer-box { background: rgba(212, 175, 55, 0.05); border: 1px solid rgba(212, 175, 55, 0.2); }
-
-        .ticket-gradient { background: linear-gradient(135deg, #1a1a1a 0%, #050505 100%); border: 2px solid #d4af37; }
-
-        .toast-show { transform: translateX(0); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-
-        .toast-hide { transform: translateX(150%); transition: transform 0.5s ease-in; }
-
-        @keyframes pulse-gold { 0%, 100% { box-shadow: 0 0 5px rgba(212,175,55,0.2); } 50% { box-shadow: 0 0 20px rgba(212,175,55,0.4); } }
-
-        .animate-gold { animation: pulse-gold 3s infinite; }
-
-        .blur-bg { backdrop-filter: blur(15px); background: rgba(0,0,0,0.9); }
-
-        .custom-scroll::-webkit-scrollbar { width: 4px; }
-
-        .custom-scroll::-webkit-scrollbar-thumb { background: #d4af37; border-radius: 10px; }
-
-        
-
-        .buy-popup {
-
+        /* BG PATTERN - kratka jak na screenie */
+        body::before {
+            content: '';
             position: fixed;
+            inset: 0;
+            background-image:
+                repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 40px),
+                repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 40px);
+            pointer-events: none;
+            z-index: 0;
+        }
 
-            bottom: 40px;
+        /* Czerwona nakładka górna */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60vh;
+            background: radial-gradient(ellipse at 50% -10%, rgba(180,0,30,0.6) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
 
+        #root { position: relative; z-index: 1; }
+
+        /* HEADER */
+        .site-header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            height: 64px;
+            background: rgba(8,8,8,0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .site-logo {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: 28px;
+            letter-spacing: -1px;
+            color: var(--white);
+        }
+
+        .site-logo span { color: var(--red); }
+
+        .header-nav {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .header-nav a {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--grey-light);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .header-nav a:hover { color: var(--white); }
+
+        .btn-login {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-size: 13px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--white);
+            background: transparent;
+            border: 2px solid var(--white);
+            padding: 8px 22px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-login:hover {
+            background: var(--white);
+            color: var(--black);
+        }
+
+        /* HERO */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 100px 20px 60px;
+            position: relative;
+        }
+
+        .hero-bg-text {
+            position: absolute;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: clamp(120px, 25vw, 280px);
+            color: transparent;
+            -webkit-text-stroke: 1px rgba(255,255,255,0.06);
+            top: 50%;
             left: 50%;
-
-            transform: translateX(-50%);
-
-            z-index: 9999;
-
-            animation: slideUp 0.5s ease-out;
-
+            transform: translate(-50%, -50%);
+            white-space: nowrap;
+            pointer-events: none;
+            user-select: none;
+            line-height: 1;
         }
 
-        @keyframes slideUp {
-
-            from { bottom: -100px; opacity: 0; }
-
-            to { bottom: 40px; opacity: 1; }
-
+        .hero-event-label {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 16px;
         }
 
-        .btn-buy-anim {
-
-            background: linear-gradient(45deg, #ff0000, #d4af37);
-
-            color: white;
-
-            box-shadow: 0 0 20px rgba(212,175,55,0.5);
-
-            transition: all 0.3s ease;
-
+        .hero-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: clamp(80px, 16vw, 160px);
+            line-height: 0.9;
+            letter-spacing: -2px;
+            text-transform: uppercase;
+            color: var(--white);
+            margin-bottom: 8px;
+            position: relative;
         }
 
-        .btn-buy-anim:hover {
-
-            transform: scale(1.1);
-
-            box-shadow: 0 0 40px rgba(255,0,0,0.6);
-
+        .hero-title sup {
+            font-size: 0.3em;
+            color: var(--red);
+            vertical-align: super;
         }
 
-        .f30-coin {
-            display: inline-flex; justify-content: center; align-items: center;
-            border-radius: 50%;
-            background: radial-gradient(circle, #f4cf57, #d4af37);
-            border: 2px solid #8b6508; color: black; font-weight: 900;
-            font-family: 'Orbitron', sans-serif; font-style: italic;
-            box-shadow: 0 0 15px rgba(212,175,55,0.4), inset 0 0 5px rgba(255,255,255,0.5);
-            animation: spin-coin 3s linear infinite;
+        .hero-date {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 48px;
         }
 
-        @keyframes spin-coin {
-            0% { transform: rotateY(0deg); }
-            100% { transform: rotateY(360deg); }
+        /* TIMER */
+        .timer-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 52px;
+            width: 100%;
+            max-width: 340px;
         }
+
+        .timer-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 8px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.03);
+        }
+
+        .timer-num {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: 40px;
+            line-height: 1;
+            color: var(--white);
+        }
+
+        .timer-label {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.35);
+            margin-top: 4px;
+        }
+
+        /* BUTTONS */
+        .btn-primary {
+            display: block;
+            width: 100%;
+            max-width: 360px;
+            padding: 18px 32px;
+            background: var(--red);
+            color: var(--white);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-size: 15px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-align: center;
+            text-decoration: none;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary:hover { background: #C8001F; }
+
+        .btn-secondary {
+            display: block;
+            width: 100%;
+            max-width: 360px;
+            padding: 17px 32px;
+            background: transparent;
+            color: var(--white);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-size: 15px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            border: 2px solid rgba(255,255,255,0.4);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--white);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .btn-outline-red {
+            display: block;
+            width: 100%;
+            max-width: 360px;
+            padding: 17px 32px;
+            background: transparent;
+            color: var(--white);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-size: 15px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            border: 2px solid rgba(232,0,42,0.5);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .btn-outline-red:hover {
+            border-color: var(--red);
+            background: rgba(232,0,42,0.1);
+        }
+
+        /* MAIN CONTENT */
+        .main-content {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        /* SECTION DIVIDER */
+        .section-divider {
+            width: 100%;
+            height: 1px;
+            background: rgba(255,255,255,0.08);
+            margin: 48px 0;
+            position: relative;
+        }
+
+        .section-divider::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 60px;
+            height: 2px;
+            background: var(--red);
+            top: -0.5px;
+        }
+
+        /* SECTION TITLE */
+        .section-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: clamp(32px, 6vw, 52px);
+            text-transform: uppercase;
+            letter-spacing: -1px;
+            color: var(--white);
+            margin-bottom: 6px;
+        }
+
+        .section-subtitle {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.3);
+            margin-bottom: 32px;
+        }
+
+        /* NICK INPUT */
+        .nick-input-wrap {
+            margin-bottom: 40px;
+        }
+
+        .nick-label {
+            display: block;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 10px;
+        }
+
+        .nick-input {
+            width: 100%;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-bottom: 2px solid var(--red);
+            padding: 16px 20px;
+            color: var(--white);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 22px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            outline: none;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .nick-input:focus {
+            background: rgba(255,255,255,0.07);
+            border-bottom-color: var(--white);
+        }
+
+        .nick-input::placeholder { color: rgba(255,255,255,0.2); }
+
+        /* FIGHT CARD */
+        .fight-card {
+            border: 1px solid rgba(255,255,255,0.08);
+            margin-bottom: 12px;
+            background: rgba(255,255,255,0.02);
+            transition: border-color 0.2s;
+            overflow: hidden;
+        }
+
+        .fight-card:hover { border-color: rgba(255,255,255,0.2); }
+
+        .fight-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            background: rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .fight-num {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: 12px;
+            color: var(--red);
+            letter-spacing: 0.1em;
+        }
+
+        .fight-cat {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 11px;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.35);
+        }
+
+        .fight-pick-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+        }
+
+        .pick-btn {
+            padding: 20px 12px;
+            background: transparent;
+            border: none;
+            border-right: 1px solid rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.5);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: clamp(13px, 2.5vw, 18px);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            line-height: 1.2;
+        }
+
+        .pick-btn:last-child { border-right: none; }
+
+        .pick-btn:hover {
+            background: rgba(255,255,255,0.05);
+            color: var(--white);
+        }
+
+        .pick-btn.selected {
+            background: var(--red);
+            color: var(--white);
+        }
+
+        .pick-badge {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            font-style: normal;
+            opacity: 0.7;
+            background: rgba(0,0,0,0.2);
+            padding: 2px 8px;
+        }
+
+        /* VS DIVIDER */
+        .vs-divider {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: 13px;
+            color: rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.03);
+            border-left: 1px solid rgba(255,255,255,0.08);
+            border-right: 1px solid rgba(255,255,255,0.08);
+            width: 40px;
+            flex-shrink: 0;
+        }
+
+        /* STAKE SLIDER */
+        .stake-area {
+            padding: 14px 16px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .stake-info {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            color: rgba(255,255,255,0.4);
+            white-space: nowrap;
+        }
+
+        .stake-val { color: var(--red); }
+        .stake-win { color: rgba(100,220,100,0.8); }
 
         .fc-slider {
-            -webkit-appearance: none; width: 100%; height: 6px; background: #2a2a2a; border-radius: 5px; outline: none;
+            flex: 1;
+            -webkit-appearance: none;
+            height: 2px;
+            background: rgba(255,255,255,0.1);
+            outline: none;
         }
 
         .fc-slider::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%;
-            background: linear-gradient(45deg, #d4af37, #f4cf57); cursor: pointer; box-shadow: 0 0 10px rgba(212,175,55,0.7);
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--red);
+            cursor: pointer;
+            border: 2px solid white;
         }
 
-        .nav-tab {
-            transition: all 0.3s ease;
-            position: relative;
-        }
-        .nav-tab.active {
-            color: #d4af37;
-        }
-        .nav-tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
+        /* WALLET BADGE */
+        .wallet-badge {
+            position: fixed;
+            top: 64px;
             left: 0;
+            right: 0;
+            z-index: 90;
+            background: rgba(8,8,8,0.95);
+            border-bottom: 2px solid var(--red);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 10px 20px;
+            backdrop-filter: blur(20px);
+        }
+
+        .wallet-label {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.35);
+        }
+
+        .wallet-val {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: 22px;
+            color: var(--white);
+        }
+
+        .wallet-val span { color: var(--red); }
+
+        /* TABS */
+        .tab-row {
+            display: flex;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            margin-bottom: 40px;
+            gap: 0;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 16px 8px;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            color: rgba(255,255,255,0.35);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-size: 13px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover { color: rgba(255,255,255,0.7); }
+
+        .tab-btn.active {
+            color: var(--white);
+            border-bottom-color: var(--red);
+        }
+
+        /* LEADERBOARD */
+        .lb-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            transition: background 0.15s;
+        }
+
+        .lb-row:hover { background: rgba(255,255,255,0.03); }
+
+        .lb-rank {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: 24px;
+            width: 40px;
+            color: rgba(255,255,255,0.15);
+        }
+
+        .lb-rank.gold { color: #D4A820; }
+        .lb-rank.silver { color: #A0A0A0; }
+        .lb-rank.bronze { color: #8B5E3C; }
+
+        .lb-nick {
+            flex: 1;
+            padding: 0 16px;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: var(--white);
+        }
+
+        .lb-score {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: 20px;
+            color: var(--red);
+        }
+
+        /* STORE / CASINO */
+        .store-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .store-card {
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 28px 20px;
+            text-align: center;
+            transition: border-color 0.2s, background 0.2s;
+            background: rgba(255,255,255,0.02);
+        }
+
+        .store-card:hover {
+            border-color: var(--red);
+            background: rgba(232,0,42,0.04);
+        }
+
+        .store-icon { font-size: 36px; margin-bottom: 16px; display: block; }
+
+        .store-name {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--white);
+            margin-bottom: 8px;
+        }
+
+        .store-desc {
+            font-size: 12px;
+            color: rgba(255,255,255,0.35);
+            line-height: 1.6;
+            margin-bottom: 20px;
+            min-height: 54px;
+        }
+
+        .store-buy-btn {
+            display: block;
             width: 100%;
-            height: 2px;
-            background: #d4af37;
-            box-shadow: 0 0 10px #d4af37;
+            padding: 13px;
+            background: var(--red);
+            color: var(--white);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-size: 13px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
         }
 
-        @keyframes case-spin {
-            0% { transform: scale(1); filter: blur(0px); }
-            50% { transform: scale(1.1); filter: blur(2px); }
-            100% { transform: scale(1); filter: blur(0px); }
-        }
-        .spinning {
-            animation: case-spin 0.2s infinite;
+        .store-buy-btn:hover { background: #C8001F; }
+        .store-buy-btn.purple { background: #7c3aed; }
+        .store-buy-btn.purple:hover { background: #6d28d9; }
+        .store-buy-btn.blue { background: #1d4ed8; }
+        .store-buy-btn.blue:hover { background: #1e40af; }
+
+        /* CASINO */
+        .casino-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 16px;
         }
 
+        .casino-card {
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 24px 16px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            background: rgba(255,255,255,0.02);
+            transition: border-color 0.2s;
+        }
+
+        .casino-card:hover { border-color: rgba(255,255,255,0.25); }
+        .casino-card.gold-card { border-color: rgba(212,168,32,0.4); }
+        .casino-card.gold-card:hover { border-color: #D4A820; }
+
+        .casino-icon {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 16px;
+        }
+
+        .casino-name {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-size: 16px;
+            text-transform: uppercase;
+            color: var(--white);
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .casino-max {
+            font-size: 11px;
+            color: rgba(255,255,255,0.3);
+            font-weight: 700;
+            margin-bottom: 16px;
+            letter-spacing: 0.15em;
+        }
+
+        .casino-open-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: transparent;
+            color: rgba(255,255,255,0.7);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-size: 12px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .casino-open-btn:hover {
+            background: rgba(255,255,255,0.08);
+            color: var(--white);
+        }
+
+        .casino-open-btn.gold-btn {
+            border-color: rgba(212,168,32,0.6);
+            color: #D4A820;
+        }
+
+        .casino-open-btn.gold-btn:hover {
+            background: rgba(212,168,32,0.15);
+            border-color: #D4A820;
+        }
+
+        .jackpot-badge {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            background: var(--red);
+            padding: 4px 8px;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-size: 10px;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+        }
+
+        @keyframes spin-anim {
+            0% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.15) rotate(5deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        .spinning-icon { animation: spin-anim 0.3s infinite; }
+
+        .spin-result {
+            border: 1px solid rgba(255,255,255,0.15);
+            border-left: 3px solid var(--red);
+            padding: 20px 24px;
+            margin-bottom: 32px;
+        }
+
+        .spin-result-txt {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: 24px;
+            text-transform: uppercase;
+            color: var(--white);
+        }
+
+        /* TICKET */
+        .ticket {
+            border: 1px solid rgba(255,255,255,0.12);
+            border-left: 3px solid var(--red);
+            padding: 28px;
+            background: rgba(255,255,255,0.02);
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .ticket-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: 13px;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.3);
+        }
+
+        .ticket-nick {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: 32px;
+            text-transform: uppercase;
+            color: var(--white);
+        }
+
+        .ticket-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .ticket-cat {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.25);
+            width: 100px;
+        }
+
+        .ticket-pick {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-size: 15px;
+            text-transform: uppercase;
+            text-align: right;
+            flex: 1;
+        }
+
+        .ticket-pick.win { color: #4ade80; }
+        .ticket-pick.lose { color: var(--red); }
+        .ticket-pick.draw { color: rgba(255,255,255,0.4); }
+        .ticket-pick.pending { color: var(--white); }
+
+        .ticket-stake {
+            font-size: 11px;
+            color: rgba(255,255,255,0.25);
+            font-weight: 600;
+            text-align: right;
+        }
+
+        /* BALANCE BIG */
+        .balance-hero {
+            text-align: center;
+            padding: 40px 20px;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-top: 3px solid var(--red);
+            margin-bottom: 32px;
+            background: rgba(255,255,255,0.01);
+        }
+
+        .balance-label {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.3);
+            margin-bottom: 12px;
+        }
+
+        .balance-num {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: 72px;
+            line-height: 1;
+            color: var(--white);
+        }
+
+        .balance-currency {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--red);
+            letter-spacing: 0.2em;
+            margin-top: 8px;
+        }
+
+        /* TOAST */
+        .toast {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%) translateY(120px);
+            z-index: 999;
+            background: var(--black);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-left: 3px solid var(--red);
+            padding: 16px 24px;
+            min-width: 260px;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .toast.visible {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast-msg {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 15px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: var(--white);
+        }
+
+        /* INTRO OVERLAY */
+        .intro-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 500;
+            background: rgba(0,0,0,0.96);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .intro-box {
+            max-width: 440px;
+            width: 100%;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-top: 3px solid var(--red);
+            padding: 48px 40px;
+            text-align: center;
+            background: var(--black);
+        }
+
+        .intro-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: 72px;
+            line-height: 0.9;
+            text-transform: uppercase;
+            color: var(--white);
+            margin-bottom: 4px;
+        }
+
+        .intro-sub {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.25);
+            margin-bottom: 32px;
+        }
+
+        .rules-box {
+            border: 1px solid rgba(255,255,255,0.07);
+            padding: 24px;
+            margin-bottom: 32px;
+            text-align: left;
+        }
+
+        .rules-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            color: var(--red);
+            margin-bottom: 16px;
+        }
+
+        .rule-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .rule-bullet {
+            width: 4px;
+            height: 4px;
+            background: var(--red);
+            flex-shrink: 0;
+            margin-top: 6px;
+        }
+
+        .rule-text {
+            font-size: 13px;
+            color: rgba(255,255,255,0.5);
+            line-height: 1.5;
+        }
+
+        .rule-text strong { color: var(--white); }
+
+        /* LOCKED */
+        .locked-box {
+            border: 1px solid rgba(232,0,42,0.2);
+            border-left: 3px solid var(--red);
+            padding: 60px 40px;
+            text-align: center;
+            background: rgba(232,0,42,0.03);
+        }
+
+        .locked-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-style: italic;
+            font-size: 36px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--red);
+            margin-bottom: 12px;
+        }
+
+        .locked-sub {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.3);
+        }
+
+        /* ADMIN */
+        .admin-login-box {
+            max-width: 400px;
+            margin: 120px auto 0;
+            padding: 40px;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-top: 3px solid var(--red);
+        }
+
+        .admin-input {
+            width: 100%;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+            padding: 14px 16px;
+            color: var(--white);
+            font-family: 'Barlow', sans-serif;
+            font-size: 15px;
+            outline: none;
+            margin-bottom: 16px;
+        }
+
+        .admin-input:focus { border-bottom-color: var(--red); }
+
+        /* WAITING indicator */
+        .waiting-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: rgba(255,200,50,0.8);
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 600px) {
+            .site-header { padding: 0 16px; }
+            .header-nav { display: none; }
+            .main-content { padding: 0 16px 80px; }
+            .hero { padding: 90px 16px 60px; }
+            .intro-box { padding: 36px 24px; }
+        }
     </style>
-
 </head>
-
 <body>
-
     <div id="root"></div>
 
-
-
     <script type="text/babel">
-
         const { useState, useEffect, useRef, useMemo } = React;
 
-
-
         const firebaseConfig = {
-
             apiKey: "AIzaSyDSW1Rbw-gDY_JQ9YTrdb3lrJCZf0aAWyw",
-
             authDomain: "fame-30.firebaseapp.com",
-
             databaseURL: "https://fame-30-default-rtdb.europe-west1.firebasedatabase.app",
-
             projectId: "fame-30",
-
             storageBucket: "fame-30.firebasestorage.app",
-
             messagingSenderId: "447768289074",
-
             appId: "1:447768289074:web:49ce781e967ab86417812b"
-
         };
 
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-
         const db = firebase.database();
 
-
-
         const WEBHOOK_URL = "https://discord.com/api/webhooks/1482735762553176105/vCpLZNRhwP8bUYget_Aqf5e7ll6bBqvHTw3-HzvNeGyP";
-
-        const DISCORD_LINK = "https://discord.gg/4MFDzTTFsH"; 
-
-        const DEADLINE = new Date('2026-03-21T19:30:00'); 
-
-        
-
-        const soundUrls = {
-
-            click: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
-
-            success: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
-
-            notify: 'https://assets.mixkit.co/active_storage/sfx/2357/2357-preview.mp3'
-
-        };
-
-
+        const DEADLINE = new Date('2026-05-09T19:30:00');
 
         const FIGHTS = [
-
             { id: 1, p1: 'Monika Weitz', p2: 'Wiktoria Zagacka', cat: 'BOKS' },
-
             { id: 2, p1: 'Krystian Jakiel', p2: 'Piotr Szewc', cat: 'BOKS' },
-
             { id: 3, p1: 'Oskar Wierzejski', p2: 'Klaudiusz Mazanowski', cat: 'MMA' },
-
             { id: 4, p1: 'Michał Pasternak', p2: 'Michał Królik', cat: 'BOKS' },
-
             { id: 5, p1: 'Nikola Biela', p2: 'Żaneta Koloska', cat: 'K-1' },
-
             { id: 6, p1: 'Łukasz Pawłowski', p2: 'Nikodem Sławik', cat: 'K-1 / MMA' },
-
             { id: 7, p1: 'Robert Karaś', p2: 'Kasper Gutkowski', cat: 'BOKS / K-1' },
-
             { id: 8, p1: 'Krzyżanowski/Bazyluk', p2: 'Stępień/Fares', cat: '2vs2 MMA/BOKS' },
-
             { id: 9, p1: 'Marta Linkiewicz', p2: 'Izabela Badurek', cat: 'K-1' },
-
             { id: 10, p1: 'Alan Kwieciński', p2: 'Michał Skowronek', cat: 'K-1' },
-
             { id: 11, p1: 'Maksymilian Wiewiórka', p2: 'Alberto Simao', cat: 'MMA' },
-
             { id: 12, p1: 'Denis Załęcki', p2: 'Bartosz Szachta', cat: 'K-1' },
-
             { id: 13, p1: 'Jakub Flas', p2: 'Akop Szostak', cat: 'BOKS' },
-
             { id: 14, p1: 'Makhmud Muradov', p2: 'Denis Labryga', cat: 'MAIN EVENT K-1' }
-
         ];
 
-
-
         function App() {
-
             const [view, setView] = useState('home');
-
             const [nick, setNick] = useState('');
-
             const [picks, setPicks] = useState({});
-
             const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 });
-
             const [status, setStatus] = useState('idle');
-
             const [showTerms, setShowTerms] = useState(true);
-
             const [toast, setToast] = useState({ show: false, msg: '' });
-
             const [isLogged, setIsLogged] = useState(false);
-
             const [officialResults, setOfficialResults] = useState({});
-
             const [userBet, setUserBet] = useState(JSON.parse(localStorage.getItem('fame_bet_30') || null));
-
             const [secretClicks, setSecretClicks] = useState(0);
-
-            const [showBuyBtn, setShowBuyBtn] = useState(false);
-
-            const [showFighterCard, setShowFighterCard] = useState(false);
-
             const [totalBets, setTotalBets] = useState(0);
-
             const [allBets, setAllBets] = useState([]);
-
             const [isBettingLocked, setIsBettingLocked] = useState(false);
-
-            const [currentTab, setCurrentTab] = useState('ticket'); 
+            const [currentTab, setCurrentTab] = useState('ticket');
             const [isSpinning, setIsSpinning] = useState(false);
             const [spinResult, setSpinResult] = useState(null);
-
-            // STANY DO NADAWANIA FC PRZEZ ADMINA
             const [adminSelectedUser, setAdminSelectedUser] = useState('');
             const [adminFcAmount, setAdminFcAmount] = useState('');
 
-
-
-            const audioRefs = useRef({
-
-                click: new Audio(soundUrls.click),
-
-                success: new Audio(soundUrls.success),
-
-                notify: new Audio(soundUrls.notify)
-
-            });
-
-
-
             useEffect(() => {
-
                 const resRef = db.ref('official_results');
-
                 resRef.on('value', snap => setOfficialResults(snap.val() || {}));
 
-
-
                 const betsRef = db.ref('wszystkie_kupony');
-
                 betsRef.on('value', snap => {
                     const data = snap.val() || {};
                     const parsedBets = Object.keys(data).map(key => ({ id: key, ...data[key] }));
@@ -325,94 +1194,28 @@
                 const configRef = db.ref('config/betting_locked');
                 configRef.on('value', snap => setIsBettingLocked(snap.val() || false));
 
-
-
                 const timer = setInterval(() => {
-
                     const diff = DEADLINE - new Date();
-
                     setTimeLeft({
-
                         d: Math.max(0, Math.floor(diff / 86400000)),
-
                         h: Math.max(0, Math.floor((diff / 3600000) % 24)),
-
                         m: Math.max(0, Math.floor((diff / 60000) % 60)),
-
                         s: Math.max(0, Math.floor((diff / 1000) % 60))
-
                     });
-
                 }, 1000);
 
-
-
-                let buyInterval;
-
-                if (!showTerms && view !== 'admin') {
-
-                    buyInterval = setInterval(() => {
-
-                        setShowBuyBtn(true);
-
-                        setTimeout(() => setShowBuyBtn(false), 8000);
-
-                    }, 15000);
-
-                }
-
-
-
-                return () => { 
-
-                    clearInterval(timer); 
-
-                    if(buyInterval) clearInterval(buyInterval); 
-
-                    resRef.off(); 
-
+                return () => {
+                    clearInterval(timer);
+                    resRef.off();
                     betsRef.off();
                     configRef.off();
-
                 };
-
-            }, [showTerms, view]);
-
-
-
-            const playSound = (name) => {
-
-                const sound = audioRefs.current[name];
-
-                if (sound) { sound.currentTime = 0; sound.volume = 0.5; sound.play().catch(() => {}); }
-
-            };
-
-
-
-            const unlockAudio = () => {
-
-                Object.values(audioRefs.current).forEach(s => { s.play().then(()=>s.pause()).catch(()=>{}); });
-
-                setShowTerms(false);
-
-                showNotify(userBet ? "Witaj ponownie!" : "Powodzenia w typowaniu!");
-
-            };
-
-
+            }, []);
 
             const showNotify = (msg) => {
-
-                playSound('notify');
-
                 setToast({ show: true, msg });
-
                 setTimeout(() => setToast({ show: false, msg: '' }), 4000);
-
             };
-
-
 
             const handleAdminLogin = async () => {
                 const l = document.getElementById('l').value;
@@ -420,7 +1223,6 @@
                 try {
                     const snap = await db.ref('admin_auth').once('value');
                     const auth = snap.val();
-                    
                     if (!auth) {
                         if (l === 'qali09' && p === 'QaLi090909.') {
                             await db.ref('admin_auth').set({ user: l, pass: btoa(p) });
@@ -428,156 +1230,73 @@
                         } else alert('Błąd! Złe dane.');
                     } else {
                         if (auth.user === l && atob(auth.pass) === p) setIsLogged(true);
-                        else alert('Błąd logowania! Niepoprawne hasło.');
+                        else alert('Błąd logowania!');
                     }
-                } catch(e) {
-                    alert('Błąd połączenia z bazą!');
-                }
+                } catch(e) { alert('Błąd połączenia!'); }
             };
 
-
-            // FUNKCJA ADMINA: DODAWANIE FC
             const handleAdminAddFC = async () => {
                 if (!adminSelectedUser || !adminFcAmount) return alert('Wybierz gracza i wpisz kwotę!');
                 const amount = parseInt(adminFcAmount);
                 if (isNaN(amount)) return alert('Podaj poprawną liczbę!');
-
                 try {
                     const user = allBets.find(b => b.id === adminSelectedUser);
                     if (!user) return alert('Nie znaleziono gracza!');
-
                     const currentMod = user.walletModifier || 0;
                     await db.ref(`wszystkie_kupony/${adminSelectedUser}/walletModifier`).set(currentMod + amount);
-
-                    alert(`Pomyślnie zaktualizowano portfel gracza: ${user.nick} o ${amount} FC!`);
+                    alert(`Zaktualizowano portfel: ${user.nick} o ${amount} FC!`);
                     setAdminFcAmount('');
-                } catch (e) {
-                    alert('Błąd bazy danych!');
-                }
+                } catch(e) { alert('Błąd bazy danych!'); }
             };
-
-
 
             const remainingBalance = 1000 - Object.values(picks).reduce((sum, p) => sum + (p.stake || 0), 0);
 
             const handlePick = (fId, fighter) => {
-
                 if (userBet || isBettingLocked) return;
-
-                playSound('click');
-
                 setPicks(prev => {
                     const currentStake = prev[fId]?.stake || 0;
                     return { ...prev, [fId]: { fighter, stake: currentStake } };
                 });
-
             };
-
-
 
             const submitBets = async (e) => {
-
                 e.preventDefault();
-
                 if (Object.keys(picks).length < FIGHTS.length) return alert("Obstaw wszystkich zawodników!");
-
                 setStatus('loading');
-
                 try {
-
-                    await db.ref('wszystkie_kupony').push({
-
-                        nick: nick,
-
-                        typy: picks,
-
-                        data: new Date().toISOString(),
-                        walletModifier: 0 
-
-                    });
-
-
-
+                    await db.ref('wszystkie_kupony').push({ nick, typy: picks, data: new Date().toISOString(), walletModifier: 0 });
                     await fetch(WEBHOOK_URL, {
-
                         method: 'POST',
-
                         headers: { 'Content-Type': 'application/json' },
-
                         body: JSON.stringify({
-
-                            username: "FAME 30 | SYSTEM",
-
-                            embeds: [{
-
-                                title: `🎯 NOWY KUPON: ${nick}`,
-
-                                color: 15844367,
-
-                                fields: FIGHTS.map(f => {
-                                    const p = picks[f.id];
-                                    return { name: f.cat, value: `🥊 **${p?.fighter || 'Brak'}**\n💰 ${p?.stake || 0} FC`, inline: true };
-                                }),
-
-                                timestamp: new Date().toISOString()
-
-                            }]
-
+                            username: "FAME 31 | SYSTEM",
+                            embeds: [{ title: `🎯 NOWY KUPON: ${nick}`, color: 15209506, fields: FIGHTS.map(f => { const p = picks[f.id]; return { name: f.cat, value: `🥊 **${p?.fighter || 'Brak'}**\n💰 ${p?.stake || 0} FC`, inline: true }; }), timestamp: new Date().toISOString() }]
                         })
-
                     });
-
                     const betData = { nick, picks, date: new Date().toLocaleString() };
-
                     localStorage.setItem('fame_bet_30', JSON.stringify(betData));
-
                     setUserBet(betData);
-
                     setStatus('success');
-
-                    playSound('success');
-
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-
-                } catch (e) { alert("Błąd połączenia z bazą!"); setStatus('idle'); }
-
+                } catch(e) { alert("Błąd połączenia!"); setStatus('idle'); }
             };
-
-
 
             const userCurrentBalance = useMemo(() => {
                 if (!userBet) return 1000;
                 let bal = 1000;
-                
-                if(userBet.picks) {
+                if (userBet.picks) {
                     Object.entries(userBet.picks).forEach(([fId, pickData]) => {
                         const stake = pickData.stake || 0;
                         const fighter = pickData.fighter || pickData;
                         bal -= stake;
-                        
-                        if (officialResults[fId] === fighter) bal += (stake * 2); 
-                        else if (officialResults[fId] === 'REMIS') bal += stake; 
+                        if (officialResults[fId] === fighter) bal += (stake * 2);
+                        else if (officialResults[fId] === 'REMIS') bal += stake;
                     });
                 }
-
                 const userDbObj = allBets.find(b => b.nick === userBet.nick);
-                if (userDbObj && userDbObj.walletModifier) {
-                    bal += userDbObj.walletModifier;
-                }
-
+                if (userDbObj && userDbObj.walletModifier) bal += userDbObj.walletModifier;
                 return bal;
             }, [userBet, officialResults, allBets]);
-
-            const winStatus = (() => {
-                if (!userBet) return null;
-                const settled = Object.keys(officialResults).length;
-                if (settled < FIGHTS.length) return 'WAITING';
-                return FIGHTS.every(f => {
-                    const pick = userBet.picks[f.id]?.fighter || userBet.picks[f.id];
-                    return officialResults[f.id] === pick || officialResults[f.id] === 'REMIS';
-                }) ? 'WIN' : 'LOSE';
-            })();
-
 
             const leaderboard = useMemo(() => {
                 if (!allBets || allBets.length === 0) return [];
@@ -593,32 +1312,24 @@
                         });
                     }
                     if (bet.walletModifier) bal += bet.walletModifier;
-
                     return { nick: bet.nick || 'Nieznany', balance: bal };
                 }).sort((a, b) => b.balance - a.balance).slice(0, 10);
             }, [allBets, officialResults]);
 
-
             const getFightStats = (fightId) => {
                 if (!allBets || allBets.length === 0) return { p1: 0, p2: 0, total: 0 };
-                let p1Count = 0;
-                let p2Count = 0;
+                let p1Count = 0, p2Count = 0;
                 const f = FIGHTS.find(x => x.id === fightId);
                 allBets.forEach(bet => {
-                    if(bet.typy && bet.typy[fightId]) {
+                    if (bet.typy && bet.typy[fightId]) {
                         const pick = bet.typy[fightId].fighter || bet.typy[fightId];
-                        if(pick === f.p1) p1Count++;
-                        else if(pick === f.p2) p2Count++;
+                        if (pick === f.p1) p1Count++;
+                        else if (pick === f.p2) p2Count++;
                     }
                 });
                 const total = p1Count + p2Count;
-                return {
-                    p1: total ? Math.round((p1Count / total) * 100) : 0,
-                    p2: total ? Math.round((p2Count / total) * 100) : 0,
-                    total
-                };
+                return { p1: total ? Math.round((p1Count / total) * 100) : 0, p2: total ? Math.round((p2Count / total) * 100) : 0, total };
             };
-
 
             const modifyDatabaseWallet = async (amount) => {
                 const userDbObj = allBets.find(b => b.nick === userBet.nick);
@@ -629,142 +1340,84 @@
             };
 
             const handleBuyStoreItem = async (itemName, cost) => {
-                if (userCurrentBalance < cost) {
-                    return showNotify("Masz za mało Famecoinów!");
-                }
-                if (confirm(`Czy na pewno chcesz kupić: ${itemName} za ${cost} FC?`)) {
+                if (userCurrentBalance < cost) return showNotify("Za mało Famecoinów!");
+                if (confirm(`Kupić: ${itemName} za ${cost} FC?`)) {
                     await modifyDatabaseWallet(-cost);
-                    playSound('success');
                     showNotify(`Zakupiono: ${itemName}! Zgłoś się na Discord.`);
-                    
-                    fetch(WEBHOOK_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            username: "FAME STORE",
-                            content: `🛒 **${userBet.nick}** właśnie kupił w sklepie: **${itemName}** za ${cost} FC!`
-                        })
-                    });
+                    fetch(WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: "FAME STORE", content: `🛒 **${userBet.nick}** kupił: **${itemName}** za ${cost} FC!` }) });
                 }
             };
 
             const openCase = async (caseName, cost, drops) => {
                 if (isSpinning) return;
-                if (userCurrentBalance < cost) {
-                    return showNotify("Masz za mało Famecoinów!");
-                }
-
+                if (userCurrentBalance < cost) return showNotify("Za mało Famecoinów!");
                 setSpinResult(null);
                 setIsSpinning(true);
-                playSound('click');
-
                 await modifyDatabaseWallet(-cost);
-
                 setTimeout(async () => {
                     const rand = Math.random();
-                    let wonAmount = 0;
-                    let cumProb = 0;
-                    
+                    let wonAmount = 0, cumProb = 0;
                     for (const drop of drops) {
                         cumProb += drop.chance;
-                        if (rand <= cumProb) {
-                            wonAmount = drop.amount;
-                            break;
-                        }
+                        if (rand <= cumProb) { wonAmount = drop.amount; break; }
                     }
-
                     if (wonAmount > 0) {
                         await modifyDatabaseWallet(wonAmount);
-                        playSound('success');
-                        if (wonAmount >= cost * 2) {
-                            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-                            
-                            if(wonAmount >= 1000) {
-                                fetch(WEBHOOK_URL, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ content: `🎰 **JACKPOT!** Gracz **${userBet.nick}** wylosował z kasyna aż **${wonAmount} FC**!`})
-                                });
-                            }
-                        }
-                    } else {
-                        playSound('click'); 
+                        if (wonAmount >= cost * 2) { confetti({ particleCount: 100, spread: 70 }); }
+                        if (wonAmount >= 1000) { fetch(WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: `🎰 **JACKPOT!** Gracz **${userBet.nick}** wylosował **${wonAmount} FC**!` }) }); }
                     }
-
-                    setSpinResult(`Znalazłeś: ${wonAmount} FC`);
+                    setSpinResult(`WYLOSOWANO: ${wonAmount} FC`);
                     setIsSpinning(false);
-                }, 3000); 
+                }, 3000);
             };
 
-
-
+            // ---- ADMIN VIEW ----
             if (view === 'admin') {
-
                 return (
-
-                    <div className="min-h-screen p-8 max-w-[800px] mx-auto py-20">
+                    <div style={{minHeight:'100vh', padding:'24px'}}>
+                        <div className="site-header">
+                            <div className="site-logo">FÁ<span>M</span>E</div>
+                            <button onClick={() => setView('home')} className="btn-login">← Wróć</button>
+                        </div>
 
                         {!isLogged ? (
-
-                            <div className="card-bg p-8 rounded-3xl border border-yellow-500/20 max-w-sm mx-auto">
-
-                                <h2 className="fame-font gold-text text-xl mb-6 text-center uppercase italic">ADMIN LOGIN</h2>
-
-                                <input id="l" className="w-full bg-zinc-900 p-4 rounded-xl mb-4 border border-zinc-800 text-white outline-none" placeholder="Login" />
-
-                                <input id="p" type="password" title="pass" className="w-full bg-zinc-900 p-4 rounded-xl mb-6 border border-zinc-800 text-white outline-none" placeholder="Hasło" />
-
-                                <button onClick={handleAdminLogin} className="w-full btn-gold py-4 rounded-xl uppercase font-black">Wejdź</button>
-
-                                <button onClick={()=>setView('home')} className="w-full mt-4 text-zinc-600 text-[10px] uppercase italic underline">Anuluj</button>
-
+                            <div className="admin-login-box">
+                                <p style={{fontFamily:'Barlow Condensed, sans-serif', fontWeight:900, fontStyle:'italic', fontSize:'28px', textTransform:'uppercase', color:'white', marginBottom:'32px'}}>PANEL ADMINA</p>
+                                <input id="l" className="admin-input" placeholder="Login" />
+                                <input id="p" type="password" className="admin-input" placeholder="Hasło" />
+                                <button onClick={handleAdminLogin} className="btn-primary" style={{maxWidth:'100%'}}>Zaloguj</button>
                             </div>
-
                         ) : (
+                            <div style={{maxWidth:'700px', margin:'80px auto 0', paddingBottom:'80px'}}>
+                                <p style={{fontFamily:'Barlow Condensed', fontWeight:900, fontStyle:'italic', fontSize:'36px', textTransform:'uppercase', color:'white', marginBottom:'40px'}}>PANEL ADMINA</p>
 
-                            <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
-
-                                <h2 className="fame-font gold-text text-3xl uppercase italic text-center drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]">PANEL ADMINA</h2>
-                                
-                                <div className="card-bg p-6 rounded-3xl border border-zinc-800 shadow-xl">
-                                    <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-widest mb-4">Status Obstawiania</h3>
-                                    <button 
-                                        onClick={() => db.ref('config/betting_locked').set(!isBettingLocked)}
-                                        className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-lg ${isBettingLocked ? 'bg-red-500/10 text-red-500 border border-red-500/50 hover:bg-red-500/20' : 'bg-green-500/10 text-green-500 border border-green-500/50 hover:bg-green-500/20'}`}
-                                    >
-                                        {isBettingLocked ? 'ZABLOKOWANE (Trwa Gala) - Kliknij by odblokować' : 'ODBLOKOWANE - Kliknij by Zablokować'}
+                                {/* Betting Lock */}
+                                <div style={{marginBottom:'32px'}}>
+                                    <p style={{fontFamily:'Barlow Condensed', fontSize:'10px', fontWeight:700, letterSpacing:'0.35em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)', marginBottom:'12px'}}>STATUS OBSTAWIANIA</p>
+                                    <button onClick={() => db.ref('config/betting_locked').set(!isBettingLocked)} style={{width:'100%', padding:'20px', background: isBettingLocked ? 'rgba(232,0,42,0.1)' : 'rgba(0,200,50,0.08)', border: `1px solid ${isBettingLocked ? 'rgba(232,0,42,0.4)' : 'rgba(0,200,50,0.4)'}`, color: isBettingLocked ? '#E8002A' : '#4ade80', fontFamily:'Barlow Condensed', fontWeight:900, fontSize:'15px', letterSpacing:'0.2em', textTransform:'uppercase', cursor:'pointer'}}>
+                                        {isBettingLocked ? '🔴 ZABLOKOWANE — kliknij by odblokować' : '🟢 OTWARTE — kliknij by zablokować'}
                                     </button>
                                 </div>
 
-                                <div className="card-bg p-6 rounded-3xl border border-zinc-800 shadow-xl space-y-4">
-                                    <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-widest mb-4">Wyniki Walk & Głosy Widzów</h3>
-                                    <div className="space-y-4 max-h-[50vh] overflow-y-auto custom-scroll pr-2">
+                                {/* Results */}
+                                <div style={{marginBottom:'32px'}}>
+                                    <p style={{fontFamily:'Barlow Condensed', fontSize:'10px', fontWeight:700, letterSpacing:'0.35em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)', marginBottom:'16px'}}>WYNIKI WALK</p>
+                                    <div style={{maxHeight:'50vh', overflowY:'auto'}}>
                                         {FIGHTS.map(f => {
                                             const stats = getFightStats(f.id);
                                             return (
-                                                <div key={f.id} className="p-4 bg-black/40 rounded-2xl border border-zinc-900 relative overflow-hidden">
-                                                    <p className="text-[10px] text-zinc-500 font-bold mb-3 uppercase flex justify-between">
-                                                        <span>{f.cat}</span>
-                                                        <span className="text-yellow-500 drop-shadow-md">Suma Głosów: {stats.total}</span>
-                                                    </p>
-                                                    
-                                                    {stats.total > 0 && (
-                                                        <div className="flex w-full h-1.5 bg-zinc-800 rounded-full mb-4 overflow-hidden shadow-inner">
-                                                            <div style={{width: `${stats.p1}%`}} className="bg-yellow-500 h-full transition-all duration-1000"></div>
-                                                            <div style={{width: `${stats.p2}%`}} className="bg-zinc-400 h-full transition-all duration-1000"></div>
-                                                        </div>
-                                                    )}
-
-                                                    <div className="grid grid-cols-3 gap-2">
-                                                        {[f.p1, 'REMIS', f.p2].map((p, idx) => (
-                                                            <button key={p} onClick={() => db.ref('official_results/' + f.id).set(p)}
-                                                            className={`py-3 rounded-xl text-[9px] font-black transition-all border flex flex-col items-center justify-center gap-1.5 ${officialResults[f.id] === p ? (p==='REMIS' ? 'bg-zinc-600 text-white border-white' : 'bg-yellow-500 text-black border-white') : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-yellow-500/50 hover:text-white'}`}>
-                                                                <span className="text-center px-1">{p.toUpperCase()}</span>
-                                                                {p !== 'REMIS' && stats.total > 0 && (
-                                                                    <span className={`text-[8px] px-2 py-0.5 rounded-full font-black ${officialResults[f.id] === p ? 'bg-black/30 text-black' : 'bg-black text-yellow-500'}`}>{idx === 0 ? stats.p1 : stats.p2}%</span>
-                                                                )}
+                                                <div key={f.id} style={{borderBottom:'1px solid rgba(255,255,255,0.06)', paddingBottom:'16px', marginBottom:'16px'}}>
+                                                    <div style={{display:'flex', justifyContent:'space-between', marginBottom:'10px'}}>
+                                                        <span style={{fontFamily:'Barlow Condensed', fontSize:'12px', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)'}}>{f.cat}</span>
+                                                        <span style={{fontFamily:'Barlow Condensed', fontSize:'11px', fontWeight:700, color:'rgba(255,255,255,0.25)'}}>głosy: {stats.total}</span>
+                                                    </div>
+                                                    <div style={{display:'grid', gridTemplateColumns:'1fr auto 1fr', gap:'8px'}}>
+                                                        {[f.p1, f.p2].map((p, idx) => (
+                                                            <button key={p} onClick={() => db.ref('official_results/' + f.id).set(p)} style={{padding:'14px 8px', background: officialResults[f.id] === p ? '#E8002A' : 'rgba(255,255,255,0.03)', border: `1px solid ${officialResults[f.id] === p ? '#E8002A' : 'rgba(255,255,255,0.1)'}`, color: officialResults[f.id] === p ? 'white' : 'rgba(255,255,255,0.5)', fontFamily:'Barlow Condensed', fontWeight:900, fontSize:'12px', textTransform:'uppercase', letterSpacing:'0.05em', cursor:'pointer'}}>
+                                                                {p}<br/><span style={{fontSize:'10px', opacity:0.6}}>{idx === 0 ? stats.p1 : stats.p2}%</span>
                                                             </button>
                                                         ))}
+                                                        <button onClick={() => db.ref('official_results/' + f.id).set('REMIS')} style={{padding:'14px 8px', background: officialResults[f.id] === 'REMIS' ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.03)', border: `1px solid ${officialResults[f.id] === 'REMIS' ? 'white' : 'rgba(255,255,255,0.1)'}`, color: officialResults[f.id] === 'REMIS' ? 'white' : 'rgba(255,255,255,0.35)', fontFamily:'Barlow Condensed', fontWeight:900, fontSize:'12px', textTransform:'uppercase', cursor:'pointer'}}>REMIS</button>
                                                     </div>
                                                 </div>
                                             );
@@ -772,353 +1425,232 @@
                                     </div>
                                 </div>
 
-                                <div className="card-bg p-6 rounded-3xl border border-zinc-800 shadow-xl">
-                                    <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-widest mb-4 flex justify-between items-center">
-                                        <span>Zarządzaj Kuponami (Wszystkie: {allBets.length})</span>
-                                    </h3>
-                                    <div className="space-y-2 max-h-[30vh] overflow-y-auto custom-scroll pr-2">
+                                {/* Users */}
+                                <div style={{marginBottom:'32px'}}>
+                                    <p style={{fontFamily:'Barlow Condensed', fontSize:'10px', fontWeight:700, letterSpacing:'0.35em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)', marginBottom:'16px'}}>KUPONY ({allBets.length})</p>
+                                    <div style={{maxHeight:'30vh', overflowY:'auto'}}>
                                         {allBets.map(bet => (
-                                            <div key={bet.id} className="flex justify-between items-center bg-black/50 p-3 rounded-xl border border-zinc-800/80 hover:border-red-500/20 transition-colors">
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs font-bold text-white uppercase">{bet.nick}</span>
-                                                    <span className="text-[9px] text-zinc-500">{new Date(bet.data).toLocaleString()}</span>
+                                            <div key={bet.id} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 16px', borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                                                <div>
+                                                    <p style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:'15px', textTransform:'uppercase', color:'white'}}>{bet.nick}</p>
+                                                    <p style={{fontSize:'11px', color:'rgba(255,255,255,0.25)'}}>{new Date(bet.data).toLocaleString()}</p>
                                                 </div>
-                                                <button 
-                                                    onClick={() => { if(confirm(`Usunąć kupon gracza ${bet.nick}? Usunie go z bazy i tabeli TOP 10.`)) db.ref('wszystkie_kupony/' + bet.id).remove(); }}
-                                                    className="bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-2 rounded-lg text-[9px] font-black uppercase hover:bg-red-500 hover:text-white transition-all shadow-md"
-                                                >
-                                                    Usuń
-                                                </button>
+                                                <button onClick={() => { if(confirm(`Usunąć kupon gracza ${bet.nick}?`)) db.ref('wszystkie_kupony/' + bet.id).remove(); }} style={{background:'rgba(232,0,42,0.1)', border:'1px solid rgba(232,0,42,0.3)', color:'#E8002A', padding:'8px 16px', fontFamily:'Barlow Condensed', fontWeight:900, fontSize:'11px', textTransform:'uppercase', cursor:'pointer'}}>Usuń</button>
                                             </div>
                                         ))}
-                                        {allBets.length === 0 && <p className="text-[10px] text-zinc-500 italic text-center py-4">Brak wpisów.</p>}
                                     </div>
                                 </div>
 
-                                {/* NOWA SEKCJA: BANK CENTRALNY (NADAWANIE FC) */}
-                                <div className="card-bg p-6 rounded-3xl border border-zinc-800 shadow-xl">
-                                    <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-widest mb-4">Bank Centralny (Dodaj/Odbierz FC)</h3>
-                                    <div className="space-y-4">
-                                        <select 
-                                            className="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-white outline-none focus:border-yellow-500 uppercase text-xs font-bold"
-                                            value={adminSelectedUser}
-                                            onChange={(e) => setAdminSelectedUser(e.target.value)}
-                                        >
-                                            <option value="">-- Wybierz Gracza --</option>
-                                            {allBets.map(bet => (
-                                                <option key={bet.id} value={bet.id}>{bet.nick}</option>
-                                            ))}
-                                        </select>
-                                        
-                                        <div className="flex gap-4">
-                                            <input 
-                                                type="number" 
-                                                placeholder="Ilość FC (np. 500 lub -200)" 
-                                                className="w-2/3 bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-white outline-none focus:border-yellow-500 font-bold text-center"
-                                                value={adminFcAmount}
-                                                onChange={(e) => setAdminFcAmount(e.target.value)}
-                                            />
-                                            <button 
-                                                onClick={handleAdminAddFC}
-                                                className="w-1/3 btn-gold rounded-xl font-black uppercase text-xs shadow-lg hover:scale-105 transition-transform"
-                                            >
-                                                Wykonaj
-                                            </button>
-                                        </div>
-                                        <p className="text-[9px] text-zinc-500 italic text-center">Podaj wartość na minusie (np. -500), aby zabrać FC ze stanu konta.</p>
+                                {/* Bank */}
+                                <div style={{marginBottom:'40px'}}>
+                                    <p style={{fontFamily:'Barlow Condensed', fontSize:'10px', fontWeight:700, letterSpacing:'0.35em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)', marginBottom:'16px'}}>BANK CENTRALNY</p>
+                                    <select className="admin-input" value={adminSelectedUser} onChange={e => setAdminSelectedUser(e.target.value)} style={{fontFamily:'Barlow Condensed', textTransform:'uppercase', fontSize:'14px'}}>
+                                        <option value="">-- Wybierz gracza --</option>
+                                        {allBets.map(bet => <option key={bet.id} value={bet.id}>{bet.nick}</option>)}
+                                    </select>
+                                    <div style={{display:'flex', gap:'12px'}}>
+                                        <input type="number" placeholder="FC (np. 500 lub -200)" className="admin-input" value={adminFcAmount} onChange={e => setAdminFcAmount(e.target.value)} style={{flex:1, marginBottom:0}} />
+                                        <button onClick={handleAdminAddFC} className="btn-primary" style={{maxWidth:'120px', marginBottom:0}}>Wykonaj</button>
                                     </div>
                                 </div>
 
-                                <div className="flex gap-4 pt-4">
-                                    <button onClick={() => { if(confirm("Czy na pewno wyczyścić wyniki walk? To zresetuje obecny etap Gali.")) db.ref('official_results').remove(); }} className="w-1/3 py-5 text-red-500 text-[10px] font-bold border border-red-500/20 rounded-xl uppercase hover:bg-red-500/10">Wyczyść Wyniki</button>
-                                    <button onClick={() => setView('home')} className="w-2/3 btn-gold py-5 rounded-xl text-sm font-black uppercase shadow-[0_0_20px_rgba(212,175,55,0.2)] hover:scale-[1.02] transition-transform">Wróć na Stronę</button>
+                                <div style={{display:'flex', gap:'12px'}}>
+                                    <button onClick={() => { if(confirm("Wyczyścić wyniki walk?")) db.ref('official_results').remove(); }} style={{flex:1, padding:'16px', background:'transparent', border:'1px solid rgba(232,0,42,0.3)', color:'rgba(232,0,42,0.7)', fontFamily:'Barlow Condensed', fontWeight:900, fontSize:'13px', textTransform:'uppercase', letterSpacing:'0.15em', cursor:'pointer'}}>Wyczyść wyniki</button>
+                                    <button onClick={() => setView('home')} className="btn-primary" style={{flex:2, marginBottom:0}}>Wróć na stronę</button>
                                 </div>
-
                             </div>
-
                         )}
-
                     </div>
-
                 );
-
             }
 
-
-
+            // ---- MAIN VIEW ----
             return (
+                <div>
+                    {/* HEADER */}
+                    <header className="site-header">
+                        <div className="site-logo" onClick={() => { const c = secretClicks+1; setSecretClicks(c); if(c===5) setView('admin'); }} style={{cursor:'default'}}>FÁ<span>M</span>E</div>
+                        <nav className="header-nav">
+                            <a href="#">Oglądaj na TV</a>
+                            <a href="#">FAQ</a>
+                            <a href="#">Zrealizuj Kod</a>
+                            <a href="#">PL</a>
+                        </nav>
+                        <button className="btn-login">Zaloguj</button>
+                    </header>
 
-                <div className="min-h-screen pb-20">
-
-
-                    {!showTerms && view !== 'admin' && (
-                        <div className="fixed top-5 left-2 md:left-5 z-[300] p-3 rounded-2xl card-bg border border-yellow-500/30 shadow-[0_0_20px_rgba(212,175,55,0.15)] flex items-center gap-3 animate-in fade-in duration-700">
-                            <div className="f30-coin" style={{width: '24px', height: '24px', fontSize: '8px'}}>F30</div>
-                            <div className="pr-2">
-                                <p className="text-[8px] text-zinc-500 uppercase font-black tracking-widest mb-0.5 italic">Twój Portfel</p>
-                                <p className="text-sm text-yellow-500 font-black fame-font">{userBet ? userCurrentBalance : remainingBalance} <span className="text-[10px] text-zinc-400">FC</span></p>
-                            </div>
+                    {/* WALLET BAR (when logged in) */}
+                    {!showTerms && userBet && (
+                        <div className="wallet-badge">
+                            <span className="wallet-label">Twój stan konta</span>
+                            <span className="wallet-val">{userCurrentBalance} <span>FC</span></span>
                         </div>
                     )}
 
-
-                    {!showTerms && view !== 'admin' && (
-
-                        <button 
-
-                            onClick={() => setShowFighterCard(true)} 
-
-                            className="fixed left-0 top-1/2 -translate-y-1/2 z-[300] bg-zinc-900/90 border-r-2 border-y-2 border-yellow-500 p-4 rounded-r-2xl hover:bg-yellow-500 transition-all group shadow-2xl hidden md:block"
-
-                        >
-
-                            <p className="[writing-mode:vertical-lr] rotate-180 fame-font text-[10px] font-black tracking-[0.3em] uppercase group-hover:text-black italic">ZOBACZ KARTĘ WALK</p>
-
-                        </button>
-
-                    )}
-
-
-
-                    {showFighterCard && (
-
-                        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 blur-bg animate-in fade-in duration-300">
-
-                            <div className="relative max-w-4xl w-full flex flex-col items-center">
-
-                                <button onClick={() => setShowFighterCard(false)} className="mb-4 text-white fame-font text-sm hover:text-yellow-500 transition-colors uppercase italic font-black bg-black/50 px-4 py-2 rounded-full border border-white/10">Zamknij [X]</button>
-
-                                <div className="relative w-full flex justify-center">
-
-                                    <img src="karta.png" className="max-w-full max-h-[80vh] object-contain rounded-2xl border-2 border-yellow-500 shadow-[0_0_50px_rgba(212,175,55,0.3)]" alt="FAME 30 CARD" />
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    )}
-
-
-
-                    <div className={`fixed top-5 right-2 md:right-5 z-[300] p-4 rounded-xl card-bg border-l-4 border-l-yellow-500 shadow-2xl flex items-center gap-4 ${toast.show ? 'toast-show' : 'toast-hide'}`}>
-
-                        <div className="bg-yellow-500/20 p-2 rounded-full font-bold text-yellow-500">✓</div>
-
-                        <div><p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest italic">SYSTEM</p><p className="text-xs font-bold text-white">{toast.msg}</p></div>
-
+                    {/* TOAST */}
+                    <div className={`toast ${toast.show ? 'visible' : ''}`}>
+                        <p className="toast-msg">{toast.msg}</p>
                     </div>
 
-
-
+                    {/* INTRO OVERLAY */}
                     {showTerms && (
-
-                        <div className="fixed inset-0 z-[500] flex items-center justify-center p-6 blur-bg">
-
-                            <div className="card-bg w-full max-w-md p-10 rounded-[40px] border border-yellow-500/20 text-center shadow-2xl animate-in zoom-in duration-300">
-
-                                <h2 className="fame-font gold-text text-4xl mb-2 italic uppercase">FAME 30</h2>
-
-                                <p className="text-zinc-500 text-[10px] font-black tracking-[0.4em] uppercase mb-8 italic">Weryfikacja Zawodnika</p>
-
-                                <div className="text-zinc-400 text-[11px] text-left space-y-4 mb-10 italic bg-black/50 p-6 rounded-2xl border border-zinc-800">
-
-                                    <p className="font-bold text-yellow-500 uppercase tracking-widest text-center mb-2 underline">ZASADY OBSTAWIANIA</p>
-
-                                    <p>• Na start otrzymujesz <b>1000 Famecoinów (FC)</b>.</p>
-                                    
-                                    <p>• Wybieraj zawodników i decyduj o stawce za pomocą suwaka.</p>
-
-                                    <p>• Zbieraj Famecoiny z wygranych i <b>wymieniaj na nagrody w Sklepie!</b></p>
-
-                                    <p>• W przerwach między walkami otwieraj <b>Skrzynki z nagrodami</b>.</p>
-
+                        <div className="intro-overlay">
+                            <div className="intro-box">
+                                <p className="intro-title">FÁME<sup style={{color:'#E8002A', fontSize:'0.35em', verticalAlign:'super'}}>31</sup></p>
+                                <p className="intro-sub">Typowanie walk · Restream</p>
+                                <div className="rules-box">
+                                    <p className="rules-title">Zasady gry</p>
+                                    <div className="rule-item"><div className="rule-bullet"></div><p className="rule-text">Na start dostajesz <strong>1000 Famecoinów (FC)</strong>.</p></div>
+                                    <div className="rule-item"><div className="rule-bullet"></div><p className="rule-text">Wybieraj zawodników i decyduj o <strong>stawce suwakiem</strong>.</p></div>
+                                    <div className="rule-item"><div className="rule-bullet"></div><p className="rule-text">Wygrywaj FC i <strong>wymieniaj na nagrody w Sklepie</strong>!</p></div>
+                                    <div className="rule-item"><div className="rule-bullet"></div><p className="rule-text">W przerwach otwieraj <strong>Skrzynki w Kasynie</strong>.</p></div>
                                 </div>
-
-                                <button onClick={unlockAudio} className="w-full btn-gold py-6 mt-4 rounded-2xl uppercase tracking-widest text-xs animate-gold">WCHODZĘ DO GRY</button>
-
+                                <button className="btn-primary" style={{maxWidth:'100%', fontSize:'16px', padding:'22px'}} onClick={() => { setShowTerms(false); showNotify(userBet ? "Witaj ponownie!" : "Powodzenia w typowaniu!"); }}>WCHODZĘ DO GRY</button>
                             </div>
-
                         </div>
-
                     )}
 
+                    {/* HERO */}
+                    <section className="hero">
+                        <div className="hero-bg-text">FAME</div>
+                        <p className="hero-event-label">Typowanie walk · Restream</p>
+                        <h1 className="hero-title">FÁ<span style={{color:'#E8002A'}}>ME</span><sup style={{color:'#E8002A', fontSize:'0.2em', verticalAlign:'super'}}>31</sup></h1>
+                        <p className="hero-date">19:30, Sobota, 9 Maja 2026 · HWS Koszalin</p>
 
+                        <div className="timer-row">
+                            {[{v:timeLeft.d,l:'Dni'},{v:timeLeft.h,l:'Godz'},{v:timeLeft.m,l:'Min'},{v:timeLeft.s,l:'Sek'}].map(t => (
+                                <div key={t.l} className="timer-cell">
+                                    <span className="timer-num">{String(t.v).padStart(2,'0')}</span>
+                                    <span className="timer-label">{t.l}</span>
+                                </div>
+                            ))}
+                        </div>
 
-                    <div className={`max-w-3xl mx-auto py-12 px-6 transition-all duration-1000 ${showTerms ? 'blur-2xl scale-95' : 'blur-0 scale-100'}`}>
+                        <button className="btn-primary" onClick={() => { if(!showTerms) document.querySelector('.main-content')?.scrollIntoView({behavior:'smooth'}); else setShowTerms(false); }}>TYPUJ TERAZ</button>
+                        <button className="btn-secondary">OGLĄDAJ</button>
+                    </section>
 
-                        <header className="text-center mb-10 select-none relative mt-10 md:mt-0">
+                    {/* MAIN CONTENT */}
+                    <main className="main-content">
+                        <div className="section-divider"></div>
 
-                            <h1 onClick={() => {const c=secretClicks+1; setSecretClicks(c); if(c===5) setView('admin');}} 
-
-                                className="fame-font text-6xl md:text-8xl font-black italic gold-text mb-4 tracking-tighter drop-shadow-[0_0_20px_rgba(212,175,55,0.4)] cursor-default active:scale-95 transition-transform">FAME 30</h1>
-
-                            <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto">
-
-                                {[{v:timeLeft.d,l:'Dni'},{v:timeLeft.h,l:'Godz'},{v:timeLeft.m,l:'Min'},{v:timeLeft.s,l:'Sek'}].map(t=>(
-
-                                    <div key={t.l} className="timer-box p-3 rounded-xl border border-zinc-800/50">
-
-                                        <div className="text-xl md:text-2xl font-black fame-font italic text-white">{t.v}</div>
-
-                                        <div className="text-[9px] uppercase text-zinc-500 font-black tracking-widest">{t.l}</div>
-
-                                    </div>
-
-                                ))}
-
-                            </div>
-
-                        </header>
-
-
-
+                        {/* === LOGGED IN: TABS === */}
                         {userBet ? (
-
-                            <div className="animate-in slide-in-from-bottom duration-700">
-
-                                <div className="flex justify-center gap-6 mb-8 border-b border-zinc-800/50 pb-4 uppercase tracking-widest text-xs font-black fame-font italic">
-                                    <button onClick={() => {playSound('click'); setCurrentTab('ticket');}} className={`nav-tab px-4 py-2 ${currentTab === 'ticket' ? 'active' : 'text-zinc-500 hover:text-white'}`}>Mój Kupon</button>
-                                    <button onClick={() => {playSound('click'); setCurrentTab('store');}} className={`nav-tab px-4 py-2 flex items-center gap-2 ${currentTab === 'store' ? 'active' : 'text-zinc-500 hover:text-white'}`}>🛒 Sklep</button>
-                                    <button onClick={() => {playSound('click'); setCurrentTab('cases');}} className={`nav-tab px-4 py-2 flex items-center gap-2 ${currentTab === 'cases' ? 'active' : 'text-zinc-500 hover:text-white'}`}>🎰 Kasyno</button>
+                            <div>
+                                <div className="tab-row">
+                                    {['ticket','store','cases'].map(tab => (
+                                        <button key={tab} className={`tab-btn ${currentTab === tab ? 'active' : ''}`} onClick={() => setCurrentTab(tab)}>
+                                            {tab === 'ticket' ? 'Mój Kupon' : tab === 'store' ? '🛒 Sklep' : '🎰 Kasyno'}
+                                        </button>
+                                    ))}
                                 </div>
 
-
                                 {currentTab === 'ticket' && (
-                                    <div className="space-y-8 animate-in fade-in">
-                                        <div className="bg-yellow-500/10 border border-yellow-500/30 p-8 rounded-3xl flex flex-col items-center shadow-[0_0_30px_rgba(212,175,55,0.05)]">
-                                            <h2 className="fame-font text-zinc-400 text-sm tracking-widest italic uppercase mb-4">Twój Stan Konta</h2>
-                                            <div className="flex items-center gap-4">
-                                                <div className="f30-coin" style={{width: '40px', height: '40px', fontSize: '12px'}}>F30</div>
-                                                <span className="text-5xl font-black text-white fame-font">{userCurrentBalance}</span>
-                                            </div>
-                                            {winStatus === 'WAITING' && <p className="text-yellow-500/70 text-[10px] mt-6 font-bold uppercase tracking-widest flex items-center gap-2"><div className="w-3 h-3 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div> Czekamy na wyniki walk...</p>}
+                                    <div>
+                                        <div className="balance-hero">
+                                            <p className="balance-label">Twój stan konta</p>
+                                            <p className="balance-num">{userCurrentBalance}</p>
+                                            <p className="balance-currency">FAMECOINY</p>
+                                            <p style={{marginTop:'16px', fontFamily:'Barlow Condensed', fontSize:'12px', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'rgba(255,255,255,0.25)'}}>
+                                                <span className="waiting-dot"></span>Czekamy na wyniki walk...
+                                            </p>
                                         </div>
 
-                                        <div id="ticket" className="ticket-gradient p-6 md:p-10 rounded-[40px] border-2 border-yellow-500 relative overflow-hidden shadow-2xl">
-                                            <div className="absolute top-0 right-0 p-6 opacity-5 fame-font text-6xl italic">F30</div>
-                                            <h2 className="fame-font gold-text text-xl mb-6 uppercase italic tracking-[0.3em] text-center">KUPON ZAPISANY</h2>
-                                            <p className="text-2xl md:text-3xl font-black fame-font text-white mb-8 uppercase italic text-center underline decoration-yellow-500/30">{userBet.nick}</p>
-                                            
-                                            <div className="space-y-3">
-                                                {FIGHTS.map(f => {
-                                                    const res = officialResults[f.id];
-                                                    const userPick = userBet.picks[f.id];
-                                                    const fighterName = userPick?.fighter || userPick;
-                                                    const stake = userPick?.stake || 0;
-
-                                                    let isCorrect = null;
-                                                    if (res) {
-                                                        if (res === fighterName) isCorrect = true;
-                                                        else if (res === 'REMIS') isCorrect = 'REMIS';
-                                                        else isCorrect = false;
-                                                    }
-                                                    const statusColor = isCorrect === true ? 'text-green-500' : isCorrect === 'REMIS' ? 'text-zinc-400' : isCorrect === false ? 'text-red-500' : 'gold-text';
-
-                                                    return (
-                                                        <div key={f.id} className="flex justify-between items-center border-b border-zinc-800/50 pb-3 pt-2 px-2 md:px-4 italic">
-                                                            <span className="text-zinc-600 text-[9px] md:text-[10px] font-bold uppercase w-1/3">{f.cat}</span>
-                                                            <span className={`text-[10px] md:text-[11px] font-black uppercase tracking-tighter text-right w-2/3 flex flex-col items-end gap-1 ${statusColor}`}>
-                                                                {fighterName} {isCorrect === 'REMIS' && <span className="text-[8px] bg-zinc-800 px-1 rounded ml-1 text-white">REMIS</span>}
-                                                                <span className="opacity-60 text-[8px] tracking-widest font-bold text-zinc-400">STAWKA: {stake} FC</span>
-                                                            </span>
-                                                        </div>
-                                                    );
-                                                })}
+                                        <div className="ticket">
+                                            <div className="ticket-header">
+                                                <div>
+                                                    <p className="ticket-title">FAME 31 · Kupon</p>
+                                                    <p className="ticket-nick">{userBet.nick}</p>
+                                                </div>
+                                                <div style={{textAlign:'right'}}>
+                                                    <p style={{fontFamily:'Barlow Condensed', fontSize:'11px', fontWeight:700, letterSpacing:'0.2em', color:'rgba(255,255,255,0.25)', textTransform:'uppercase'}}>Zapisano</p>
+                                                    <p style={{fontFamily:'Barlow Condensed', fontSize:'12px', fontWeight:700, color:'rgba(255,255,255,0.4)'}}>{userBet.date}</p>
+                                                </div>
                                             </div>
+
+                                            {FIGHTS.map(f => {
+                                                const res = officialResults[f.id];
+                                                const userPick = userBet.picks[f.id];
+                                                const fighterName = userPick?.fighter || userPick;
+                                                const stake = userPick?.stake || 0;
+                                                let cls = 'pending';
+                                                if (res) { cls = res === fighterName ? 'win' : res === 'REMIS' ? 'draw' : 'lose'; }
+
+                                                return (
+                                                    <div key={f.id} className="ticket-row">
+                                                        <span className="ticket-cat">{f.cat}</span>
+                                                        <div style={{textAlign:'right'}}>
+                                                            <p className={`ticket-pick ${cls}`}>{fighterName}</p>
+                                                            <p className="ticket-stake">Stawka: {stake} FC · Wygrana: +{stake*2} FC</p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 )}
-
 
                                 {currentTab === 'store' && (
-                                    <div className="space-y-6 animate-in fade-in slide-in-from-right-10 duration-500">
-                                        <div className="text-center mb-8">
-                                            <h2 className="text-3xl fame-font italic gold-text mb-2 drop-shadow-md">SKLEP FAME</h2>
-                                            <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest">Wymieniaj wygrane na nagrody</p>
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div className="card-bg p-6 rounded-3xl border border-zinc-800 hover:border-yellow-500/50 transition-colors flex flex-col items-center text-center shadow-lg relative overflow-hidden group">
-                                                <div className="absolute top-0 right-0 bg-yellow-500 text-black text-[8px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-widest">Premium</div>
-                                                <div className="text-4xl mb-4 mt-2">🎟️</div>
-                                                <h3 className="text-white font-black text-lg mb-2 uppercase">KUPON NA FAME 31</h3>
-                                                <p className="text-zinc-500 text-[10px] mb-6 min-h-[40px]">Zapewnij sobie darmowy dostęp do restreamu z kolejnej gali bez żadnych opłat!</p>
-                                                <button onClick={() => handleBuyStoreItem('DARMOWY KUPON FAME 31', 5000)} className="w-full btn-gold py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-md hover:scale-105 transition-transform flex justify-center items-center gap-2">
-                                                    Kup za 5000 <div className="f30-coin" style={{width:'14px',height:'14px',fontSize:'5px'}}>F30</div>
-                                                </button>
+                                    <div>
+                                        <p className="section-title">Sklep Fame</p>
+                                        <p className="section-subtitle">Wymieniaj FC na nagrody</p>
+                                        <div className="store-grid">
+                                            <div className="store-card">
+                                                <span className="store-icon">🎟️</span>
+                                                <p className="store-name">Kupon FAME 32</p>
+                                                <p className="store-desc">Darmowy dostęp do restreamu z kolejnej gali.</p>
+                                                <button className="store-buy-btn" onClick={() => handleBuyStoreItem('KUPON FAME 32', 5000)}>Kup za 5000 FC</button>
                                             </div>
-
-                                            <div className="card-bg p-6 rounded-3xl border border-zinc-800 hover:border-purple-500/50 transition-colors flex flex-col items-center text-center shadow-lg">
-                                                <div className="text-4xl mb-4 mt-2">🟣</div>
-                                                <h3 className="text-purple-400 font-black text-lg mb-2 uppercase drop-shadow-[0_0_10px_rgba(168,85,247,0.4)]">RANGA VIP (DISCORD)</h3>
-                                                <p className="text-zinc-500 text-[10px] mb-6 min-h-[40px]">Zdobądź unikalną rangę na serwerze i wyróżnij się na czacie podczas oglądania!</p>
-                                                <button onClick={() => handleBuyStoreItem('RANGA VIP DISCORD', 2500)} className="w-full bg-purple-600/20 text-purple-400 border border-purple-500/50 py-4 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-purple-600 hover:text-white transition-all flex justify-center items-center gap-2">
-                                                    Kup za 2500 <div className="f30-coin" style={{width:'14px',height:'14px',fontSize:'5px'}}>F30</div>
-                                                </button>
+                                            <div className="store-card">
+                                                <span className="store-icon">🟣</span>
+                                                <p className="store-name">Ranga VIP</p>
+                                                <p className="store-desc">Unikalna ranga VIP na serwerze Discord.</p>
+                                                <button className="store-buy-btn purple" onClick={() => handleBuyStoreItem('RANGA VIP DISCORD', 2500)}>Kup za 2500 FC</button>
                                             </div>
-
-                                            <div className="card-bg p-6 rounded-3xl border border-zinc-800 hover:border-blue-500/50 transition-colors flex flex-col items-center text-center shadow-lg md:col-span-2">
-                                                <div className="text-4xl mb-4 mt-2">🎨</div>
-                                                <h3 className="text-blue-400 font-black text-lg mb-2 uppercase drop-shadow-[0_0_10px_rgba(59,130,246,0.4)]">WŁASNY KOLOR NICKU</h3>
-                                                <p className="text-zinc-500 text-[10px] mb-6">Zmień kolor swojego nicku na naszym serwerze Discord na dowolny jaki chcesz.</p>
-                                                <button onClick={() => handleBuyStoreItem('WŁASNY KOLOR NICKU', 1000)} className="w-full max-w-sm bg-blue-600/20 text-blue-400 border border-blue-500/50 py-4 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex justify-center items-center gap-2 mx-auto">
-                                                    Kup za 1000 <div className="f30-coin" style={{width:'14px',height:'14px',fontSize:'5px'}}>F30</div>
-                                                </button>
+                                            <div className="store-card">
+                                                <span className="store-icon">🎨</span>
+                                                <p className="store-name">Kolor Nicku</p>
+                                                <p className="store-desc">Własny kolor nicku na Discordzie.</p>
+                                                <button className="store-buy-btn blue" onClick={() => handleBuyStoreItem('KOLOR NICKU', 1000)}>Kup za 1000 FC</button>
                                             </div>
                                         </div>
                                     </div>
                                 )}
 
-
                                 {currentTab === 'cases' && (
-                                    <div className="space-y-6 animate-in fade-in slide-in-from-left-10 duration-500">
-                                        <div className="text-center mb-10">
-                                            <h2 className="text-3xl fame-font italic text-red-500 mb-2 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]">KASYNO</h2>
-                                            <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest">Ryzykuj i otwieraj skrzynki. Przerwa w gali? Spróbuj szczęścia.</p>
-                                        </div>
+                                    <div>
+                                        <p className="section-title" style={{color:'#E8002A'}}>Kasyno</p>
+                                        <p className="section-subtitle">Ryzykuj i otwieraj skrzynki</p>
 
                                         {spinResult && (
-                                            <div className="bg-zinc-900 border border-white/10 p-6 rounded-2xl text-center mb-8 animate-in zoom-in">
-                                                <p className="text-white text-xl font-black uppercase tracking-widest fame-font italic">{spinResult}</p>
+                                            <div className="spin-result">
+                                                <p className="spin-result-txt">{spinResult}</p>
                                             </div>
                                         )}
 
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                            <div className={`card-bg p-6 rounded-3xl border-2 border-amber-700/50 flex flex-col items-center shadow-lg relative ${isSpinning ? 'opacity-50 pointer-events-none' : ''}`}>
-                                                <div className={`w-24 h-24 bg-gradient-to-br from-amber-800 to-amber-950 rounded-2xl mb-6 shadow-inner flex items-center justify-center border-4 border-amber-900 ${isSpinning ? 'spinning' : ''}`}>
-                                                    <span className="text-4xl">📦</span>
-                                                </div>
-                                                <h3 className="text-amber-600 font-black text-sm mb-1 uppercase tracking-widest">Skrzynka Biedaka</h3>
-                                                <p className="text-[9px] text-zinc-500 mb-6 text-center font-bold">Max Drop: 1000 FC</p>
-                                                <button onClick={() => openCase('Biedaka', 350, [{chance:0.5, amount:0}, {chance:0.3, amount:200}, {chance:0.15, amount:400}, {chance:0.05, amount:1000}])} 
-                                                        className="w-full bg-amber-900/40 border border-amber-700 text-amber-500 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-amber-700 hover:text-white transition-colors">
+                                        <div className="casino-grid">
+                                            <div className={`casino-card ${isSpinning ? 'opacity-50' : ''}`} style={{pointerEvents: isSpinning ? 'none' : 'auto'}}>
+                                                <span className={`casino-icon ${isSpinning ? 'spinning-icon' : ''}`}>📦</span>
+                                                <p className="casino-name">Biedaka</p>
+                                                <p className="casino-max">Max Drop: 1000 FC</p>
+                                                <button className="casino-open-btn" onClick={() => openCase('Biedaka', 350, [{chance:0.5, amount:0}, {chance:0.3, amount:200}, {chance:0.15, amount:400}, {chance:0.05, amount:1000}])}>
                                                     Otwórz (350 FC)
                                                 </button>
                                             </div>
-
-                                            <div className={`card-bg p-6 rounded-3xl border-2 border-zinc-400/50 flex flex-col items-center shadow-[0_0_20px_rgba(161,161,170,0.1)] relative ${isSpinning ? 'opacity-50 pointer-events-none' : ''}`}>
-                                                <div className={`w-24 h-24 bg-gradient-to-br from-zinc-400 to-zinc-700 rounded-2xl mb-6 shadow-inner flex items-center justify-center border-4 border-zinc-500 ${isSpinning ? 'spinning' : ''}`}>
-                                                    <span className="text-4xl">🧰</span>
-                                                </div>
-                                                <h3 className="text-zinc-300 font-black text-sm mb-1 uppercase tracking-widest">Skrzynka Gracza</h3>
-                                                <p className="text-[9px] text-zinc-500 mb-6 text-center font-bold">Max Drop: 2000 FC</p>
-                                                <button onClick={() => openCase('Gracza', 500, [{chance:0.5, amount:0}, {chance:0.25, amount:300}, {chance:0.20, amount:800}, {chance:0.05, amount:2000}])} 
-                                                        className="w-full bg-zinc-700/40 border border-zinc-500 text-zinc-300 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-zinc-500 hover:text-white transition-colors">
+                                            <div className={`casino-card ${isSpinning ? 'opacity-50' : ''}`} style={{pointerEvents: isSpinning ? 'none' : 'auto'}}>
+                                                <span className={`casino-icon ${isSpinning ? 'spinning-icon' : ''}`}>🧰</span>
+                                                <p className="casino-name">Gracza</p>
+                                                <p className="casino-max">Max Drop: 2000 FC</p>
+                                                <button className="casino-open-btn" onClick={() => openCase('Gracza', 500, [{chance:0.5, amount:0}, {chance:0.25, amount:300}, {chance:0.20, amount:800}, {chance:0.05, amount:2000}])}>
                                                     Otwórz (500 FC)
                                                 </button>
                                             </div>
-
-                                            <div className={`card-bg p-6 rounded-3xl border-2 border-yellow-500 flex flex-col items-center shadow-[0_0_30px_rgba(212,175,55,0.2)] relative ${isSpinning ? 'opacity-50 pointer-events-none' : ''}`}>
-                                                <div className="absolute -top-3 bg-red-600 text-white text-[8px] font-black px-4 py-1 rounded-full uppercase tracking-widest animate-pulse">JACKPOT</div>
-                                                <div className={`w-24 h-24 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl mb-6 mt-2 shadow-inner flex items-center justify-center border-4 border-yellow-300 ${isSpinning ? 'spinning' : ''}`}>
-                                                    <span className="text-4xl drop-shadow-md">👑</span>
-                                                </div>
-                                                <h3 className="text-yellow-500 font-black text-sm mb-1 uppercase tracking-widest drop-shadow-md">Złota Premium</h3>
-                                                <p className="text-[9px] text-yellow-500/50 mb-6 text-center font-bold">Max Drop: 5000 FC</p>
-                                                <button onClick={() => openCase('Złota Premium', 1000, [{chance:0.55, amount:0}, {chance:0.25, amount:500}, {chance:0.15, amount:2000}, {chance:0.05, amount:5000}])} 
-                                                        className="w-full btn-gold py-3 rounded-xl text-[10px] font-black uppercase shadow-lg hover:scale-105 transition-transform">
+                                            <div className={`casino-card gold-card ${isSpinning ? 'opacity-50' : ''}`} style={{pointerEvents: isSpinning ? 'none' : 'auto'}}>
+                                                <div className="jackpot-badge">JACKPOT</div>
+                                                <span className={`casino-icon ${isSpinning ? 'spinning-icon' : ''}`} style={{marginTop:'16px'}}>👑</span>
+                                                <p className="casino-name" style={{color:'#D4A820'}}>Złota Premium</p>
+                                                <p className="casino-max" style={{color:'rgba(212,168,32,0.5)'}}>Max Drop: 5000 FC</p>
+                                                <button className="casino-open-btn gold-btn" onClick={() => openCase('Złota', 1000, [{chance:0.55, amount:0}, {chance:0.25, amount:500}, {chance:0.15, amount:2000}, {chance:0.05, amount:5000}])}>
                                                     Otwórz (1000 FC)
                                                 </button>
                                             </div>
@@ -1128,145 +1660,88 @@
                             </div>
 
                         ) : isBettingLocked ? (
-
-                            <div className="card-bg p-10 rounded-3xl border border-red-500/30 shadow-[0_0_30px_rgba(239,68,68,0.1)] flex flex-col items-center justify-center py-20 animate-in fade-in zoom-in-95">
-                                <h2 className="fame-font text-red-500 text-3xl font-black italic uppercase mb-4 text-center drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]">OBSTAWIANIE ZAKOŃCZONE</h2>
-                                <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest text-center">Gala trwa! Czekaj na wyniki live w panelu lub Discordzie.</p>
+                            <div className="locked-box">
+                                <p className="locked-title">Obstawianie Zakończone</p>
+                                <p className="locked-sub">Gala trwa! Czekaj na wyniki live.</p>
                             </div>
 
                         ) : (
+                            <form onSubmit={submitBets}>
+                                <p className="section-title">Typowanie walk</p>
+                                <p className="section-subtitle">Wybierz zwycięzcę każdej walki · Pozostało: {remainingBalance} FC</p>
 
-                            <form onSubmit={submitBets} className="space-y-6">
-
-                                <div className="card-bg p-8 rounded-3xl border border-zinc-800/50 shadow-inner">
-
-                                    <label className="block text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] text-center mb-4 italic">Twój Nick Discord</label>
-
-                                    <input required className="w-full bg-black border border-zinc-800 p-5 rounded-2xl text-center text-xl font-bold focus:border-yellow-500 outline-none uppercase text-white tracking-widest transition-all" placeholder="NICK#0000" value={nick} onChange={e=>setNick(e.target.value.toUpperCase())} />
-
+                                <div className="nick-input-wrap">
+                                    <label className="nick-label">Twój Nick Discord</label>
+                                    <input required className="nick-input" placeholder="NICK#0000" value={nick} onChange={e => setNick(e.target.value.toUpperCase())} />
                                 </div>
 
-
-
-                                <div className="space-y-4">
-
-                                    {FIGHTS.map(f => {
+                                <div style={{marginBottom:'40px'}}>
+                                    {FIGHTS.map((f, idx) => {
                                         const currentPick = picks[f.id];
                                         return (
-
-                                            <div key={f.id} className="card-bg p-6 rounded-3xl border border-zinc-800/30 hover:border-zinc-700 transition-colors group">
-
-                                                <p className="text-center text-[9px] text-zinc-500 font-bold mb-5 uppercase tracking-[0.4em] italic group-hover:text-yellow-500 transition-colors">{f.cat}</p>
-
-                                                <div className="grid grid-cols-2 gap-4">
-
-                                                    {[f.p1, f.p2].map(p => {
-                                                        const isSelected = currentPick?.fighter === p;
-                                                        return (
-
-                                                            <button key={p} type="button" onClick={() => handlePick(f.id, p)} 
-
-                                                                className={`py-6 rounded-2xl font-black text-xs transition-all border-2 flex flex-col items-center justify-center gap-2 ${isSelected ? 'btn-gold border-white scale-[1.05] shadow-lg shadow-yellow-500/20' : 'bg-black border-zinc-900 text-zinc-700 hover:border-zinc-700'}`}>
-                                                                {p.toUpperCase()}
-                                                                {isSelected && <span className="text-[9px] bg-black/20 px-2 py-1 rounded-full">WYBRANO</span>}
-                                                            </button>
-
-                                                        );
-                                                    })}
-
+                                            <div key={f.id} className="fight-card">
+                                                <div className="fight-card-header">
+                                                    <span className="fight-num">WALKA {String(idx+1).padStart(2,'0')}</span>
+                                                    <span className="fight-cat">{f.cat}</span>
                                                 </div>
-
+                                                <div style={{display:'grid', gridTemplateColumns:'1fr 40px 1fr'}}>
+                                                    <button type="button" className={`pick-btn ${currentPick?.fighter === f.p1 ? 'selected' : ''}`} onClick={() => handlePick(f.id, f.p1)}>
+                                                        {f.p1.toUpperCase()}
+                                                        {currentPick?.fighter === f.p1 && <span className="pick-badge">WYBRANO</span>}
+                                                    </button>
+                                                    <div className="vs-divider">VS</div>
+                                                    <button type="button" className={`pick-btn ${currentPick?.fighter === f.p2 ? 'selected' : ''}`} onClick={() => handlePick(f.id, f.p2)}>
+                                                        {f.p2.toUpperCase()}
+                                                        {currentPick?.fighter === f.p2 && <span className="pick-badge">WYBRANO</span>}
+                                                    </button>
+                                                </div>
                                                 {currentPick && (
-                                                    <div className="mt-6 p-4 bg-black/40 rounded-2xl border border-zinc-800/50 animate-in fade-in slide-in-from-top-2">
-                                                        <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-3">
-                                                            <span className="text-zinc-400">Stawka: <span className="text-yellow-500">{currentPick.stake} FC</span></span>
-                                                            <span className="text-zinc-400">Wygrana: <span className="text-green-500">+{currentPick.stake * 2} FC</span></span>
-                                                        </div>
-                                                        <input 
-                                                            type="range" 
-                                                            min="0" 
-                                                            max={remainingBalance + currentPick.stake} 
-                                                            step="10"
-                                                            value={currentPick.stake} 
-                                                            onChange={(e) => {
-                                                                const val = parseInt(e.target.value);
-                                                                setPicks(prev => ({...prev, [f.id]: {...prev[f.id], stake: val}}));
-                                                            }}
-                                                            className="fc-slider" 
-                                                        />
+                                                    <div className="stake-area">
+                                                        <span className="stake-info">Stawka: <span className="stake-val">{currentPick.stake} FC</span></span>
+                                                        <input type="range" min="0" max={remainingBalance + currentPick.stake} step="10" value={currentPick.stake} onChange={e => setPicks(prev => ({...prev, [f.id]: {...prev[f.id], stake: parseInt(e.target.value)}}))} className="fc-slider" />
+                                                        <span className="stake-info">+<span className="stake-win">{currentPick.stake*2} FC</span></span>
                                                     </div>
                                                 )}
-
                                             </div>
-
                                         );
                                     })}
-
                                 </div>
 
-
-
-                                <button type="submit" disabled={status==='loading'} className="w-full btn-gold py-8 rounded-[40px] text-2xl font-black italic shadow-2xl uppercase tracking-tighter animate-gold disabled:opacity-50 mt-10">
-
+                                <button type="submit" disabled={status==='loading'} className="btn-primary" style={{maxWidth:'100%', fontSize:'18px', padding:'24px', letterSpacing:'0.3em', opacity: status==='loading' ? 0.6 : 1}}>
                                     {status === 'loading' ? 'WYSYŁANIE...' : 'ZATWIERDŹ KUPON'}
-
                                 </button>
-
                             </form>
-
                         )}
 
+                        {/* LEADERBOARD */}
+                        <div className="section-divider" style={{marginTop:'64px'}}></div>
+                        <p className="section-title">TOP 10 Bogaczy</p>
+                        <p className="section-subtitle">Ranking Famecoinów</p>
 
-                        <div className="mt-20 card-bg p-8 rounded-3xl border border-yellow-500/20 shadow-2xl relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-50"></div>
-                            <h2 className="fame-font gold-text text-2xl md:text-3xl mb-8 text-center italic uppercase flex items-center justify-center gap-4 drop-shadow-[0_0_10px_rgba(212,175,55,0.2)]">
-                                <div className="f30-coin hidden md:flex" style={{width:'28px',height:'28px',fontSize:'9px'}}>F30</div>
-                                TOP 10 BOGACZY
-                                <div className="f30-coin hidden md:flex" style={{width:'28px',height:'28px',fontSize:'9px'}}>F30</div>
-                            </h2>
-                            <div className="space-y-3 relative z-10">
-                                {leaderboard.length === 0 ? (
-                                    <p className="text-center text-zinc-500 text-xs uppercase italic font-bold">Brak danych...</p>
-                                ) : (
-                                    leaderboard.map((user, idx) => (
-                                        <div key={idx} className="flex justify-between items-center bg-black/60 p-4 rounded-2xl border border-zinc-800/80 hover:border-yellow-500/30 transition-colors">
-                                            <div className="flex items-center gap-4">
-                                                <span className={`fame-font text-xl italic font-black ${idx === 0 ? 'text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]' : idx === 1 ? 'text-zinc-300' : idx === 2 ? 'text-amber-700' : 'text-zinc-600'}`}>#{idx + 1}</span>
-                                                <span className="text-white font-bold uppercase tracking-wider text-xs md:text-sm">{user.nick}</span>
-                                            </div>
-                                            <span className="gold-text font-black flex items-center gap-2 text-md md:text-lg">
-                                                {user.balance} <div className="f30-coin" style={{width:'18px',height:'18px',fontSize:'6px'}}>F30</div>
-                                            </span>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
+                        <div style={{border:'1px solid rgba(255,255,255,0.06)'}}>
+                            {leaderboard.length === 0 ? (
+                                <p style={{padding:'40px', textAlign:'center', fontFamily:'Barlow Condensed', fontSize:'14px', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'rgba(255,255,255,0.2)'}}>Brak danych...</p>
+                            ) : (
+                                leaderboard.map((user, idx) => (
+                                    <div key={idx} className="lb-row">
+                                        <span className={`lb-rank ${idx===0?'gold':idx===1?'silver':idx===2?'bronze':''}`}>#{idx+1}</span>
+                                        <span className="lb-nick">{user.nick}</span>
+                                        <span className="lb-score">{user.balance} FC</span>
+                                    </div>
+                                ))
+                            )}
                         </div>
 
-                        
-
-                        <footer className="mt-20 text-center opacity-20">
-
-                            <p className="text-[8px] fame-font tracking-[1em] uppercase select-none italic">RESTREAM © 2026</p>
-
+                        <footer style={{marginTop:'80px', paddingTop:'40px', borderTop:'1px solid rgba(255,255,255,0.06)', textAlign:'center'}}>
+                            <p style={{fontFamily:'Barlow Condensed', fontWeight:900, fontStyle:'italic', fontSize:'11px', letterSpacing:'0.5em', textTransform:'uppercase', color:'rgba(255,255,255,0.12)'}}>RESTREAM © 2026</p>
                         </footer>
-
-                    </div>
-
+                    </main>
                 </div>
-
             );
-
         }
 
-
-
         const root = ReactDOM.createRoot(document.getElementById('root'));
-
         root.render(<App />);
-
     </script>
-
 </body>
-
 </html>
