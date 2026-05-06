@@ -116,11 +116,27 @@
             padding: 8px 22px;
             cursor: pointer;
             transition: all 0.2s;
+            text-decoration: none;
+            white-space: nowrap;
         }
 
         .btn-login:hover {
             background: var(--white);
             color: var(--black);
+        }
+        
+        .header-user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .header-user-nick {
+            color: rgba(255,255,255,0.7);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            text-transform: uppercase;
         }
 
         /* HERO */
@@ -1137,6 +1153,14 @@
 
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        
+        // --- START: Konfiguracja Logowania Discord ---
+        // WAŻNE: Wstaw tutaj Client ID swojej aplikacji z Discord Developer Portal.
+        const DISCORD_CLIENT_ID = 'YOUR_DISCORD_CLIENT_ID_HERE'; 
+        // WAŻNE: Upewnij się, że ten URL jest dodany do "Redirects" w ustawieniach OAuth2 Twojej aplikacji na Discord.
+        const REDIRECT_URI = window.location.origin + window.location.pathname;
+        const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=identify`;
+        // --- END: Konfiguracja Logowania Discord ---
 
         const WEBHOOK_URL = "https://discord.com/api/webhooks/1482735762553176105/vCpLZNRhwP8bUYget_Aqf5e7ll6bBqvHTw3-HzvNeGyP";
         const DEADLINE = new Date('2026-05-09T19:30:00');
@@ -1168,7 +1192,7 @@
             const [toast, setToast] = useState({ show: false, msg: '' });
             const [isLogged, setIsLogged] = useState(false);
             const [officialResults, setOfficialResults] = useState({});
-            const [userBet, setUserBet] = useState(JSON.parse(localStorage.getItem('fame_bet_30') || null));
+            const [userBet, setUserBet] = useState(null);
             const [secretClicks, setSecretClicks] = useState(0);
             const [totalBets, setTotalBets] = useState(0);
             const [allBets, setAllBets] = useState([]);
@@ -1193,6 +1217,51 @@
 
                 const configRef = db.ref('config/betting_locked');
                 configRef.on('value', snap => setIsBettingLocked(snap.val() || false));
+                
+                // --- Logika logowania przez Discord i ładowania danych użytkownika ---
+                const handleDiscordLogin = () => {
+                    const hash = window.location.hash;
+                    if (hash) {
+                        const params = new URLSearchParams(hash.substring(1));
+                        const token = params.get('access_token');
+
+                        if (token) {
+                            fetch('https://discord.com/api/users/@me', { headers: { authorization: `Bearer ${token}` } })
+                                .then(res => res.json())
+                                .then(user => {
+                                    if (user.id) {
+                                        const userNick = `${user.username.toUpperCase()}#${user.discriminator}`;
+                                        setNick(userNick);
+                                        const storedBet = JSON.parse(localStorage.getItem('fame_bet_30'));
+                                        if (storedBet && storedBet.nick === userNick) {
+                                            setUserBet(storedBet);
+                                        }
+                                        showNotify(`Witaj, ${user.username}!`);
+                                        setShowTerms(false);
+                                    }
+                                })
+                                .catch(console.error);
+
+                            window.history.pushState("", document.title, window.location.pathname + window.location.search);
+                        } else {
+                            // If no token, check for a locally stored user who didn't use Discord
+                            const storedBet = JSON.parse(localStorage.getItem('fame_bet_30') || null);
+                            if(storedBet) {
+                              setUserBet(storedBet);
+                              setNick(storedBet.nick);
+                            }
+                        }
+                    } else {
+                        // Fallback for users who already submitted without discord login
+                        const storedBet = JSON.parse(localStorage.getItem('fame_bet_30') || null);
+                        if(storedBet) {
+                          setUserBet(storedBet);
+                          setNick(storedBet.nick);
+                        }
+                    }
+                };
+
+                handleDiscordLogin();
 
                 const timer = setInterval(() => {
                     const diff = DEADLINE - new Date();
@@ -1211,6 +1280,12 @@
                     configRef.off();
                 };
             }, []);
+            
+            const handleLogout = () => {
+                localStorage.removeItem('fame_bet_30');
+                window.location.hash = '';
+                window.location.reload();
+            };
 
             const showNotify = (msg) => {
                 setToast({ show: true, msg });
@@ -1261,6 +1336,7 @@
 
             const submitBets = async (e) => {
                 e.preventDefault();
+                if (!nick) return alert("Zaloguj się przez Discord, aby obstawiać!");
                 if (Object.keys(picks).length < FIGHTS.length) return alert("Obstaw wszystkich zawodników!");
                 setStatus('loading');
                 try {
@@ -1282,10 +1358,24 @@
             };
 
             const userCurrentBalance = useMemo(() => {
-                if (!userBet) return 1000;
+                const targetNick = userBet ? userBet.nick : nick;
+                if (!targetNick) return 1000;
+                
                 let bal = 1000;
-                if (userBet.picks) {
-                    Object.entries(userBet.picks).forEach(([fId, pickData]) => {
+                
+                // Find the bet object, either from local state or all bets from DB
+                const betObj = userBet || allBets.find(b => b.nick === targetNick);
+
+                if (betObj && betObj.picks) { // userBet.picks
+                     Object.entries(betObj.picks).forEach(([fId, pickData]) => {
+                        const stake = pickData.stake || 0;
+                        const fighter = pickData.fighter || pickData;
+                        bal -= stake;
+                        if (officialResults[fId] === fighter) bal += (stake * 2);
+                        else if (officialResults[fId] === 'REMIS') bal += stake;
+                    });
+                } else if(betObj && betObj.typy) { // allBets[i].typy
+                    Object.entries(betObj.typy).forEach(([fId, pickData]) => {
                         const stake = pickData.stake || 0;
                         const fighter = pickData.fighter || pickData;
                         bal -= stake;
@@ -1293,10 +1383,11 @@
                         else if (officialResults[fId] === 'REMIS') bal += stake;
                     });
                 }
-                const userDbObj = allBets.find(b => b.nick === userBet.nick);
+               
+                const userDbObj = allBets.find(b => b.nick === targetNick);
                 if (userDbObj && userDbObj.walletModifier) bal += userDbObj.walletModifier;
                 return bal;
-            }, [userBet, officialResults, allBets]);
+            }, [userBet, nick, officialResults, allBets]);
 
             const leaderboard = useMemo(() => {
                 if (!allBets || allBets.length === 0) return [];
@@ -1332,10 +1423,13 @@
             };
 
             const modifyDatabaseWallet = async (amount) => {
-                const userDbObj = allBets.find(b => b.nick === userBet.nick);
+                const targetNick = userBet ? userBet.nick : nick;
+                const userDbObj = allBets.find(b => b.nick === targetNick);
                 if (userDbObj && userDbObj.id) {
                     const currentMod = userDbObj.walletModifier || 0;
                     await db.ref(`wszystkie_kupony/${userDbObj.id}/walletModifier`).set(currentMod + amount);
+                } else {
+                    showNotify("Błąd: Nie znaleziono kuponu w bazie danych.");
                 }
             };
 
@@ -1344,7 +1438,8 @@
                 if (confirm(`Kupić: ${itemName} za ${cost} FC?`)) {
                     await modifyDatabaseWallet(-cost);
                     showNotify(`Zakupiono: ${itemName}! Zgłoś się na Discord.`);
-                    fetch(WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: "FAME STORE", content: `🛒 **${userBet.nick}** kupił: **${itemName}** za ${cost} FC!` }) });
+                    const targetNick = userBet ? userBet.nick : nick;
+                    fetch(WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: "FAME STORE", content: `🛒 **${targetNick}** kupił: **${itemName}** za ${cost} FC!` }) });
                 }
             };
 
@@ -1364,7 +1459,8 @@
                     if (wonAmount > 0) {
                         await modifyDatabaseWallet(wonAmount);
                         if (wonAmount >= cost * 2) { confetti({ particleCount: 100, spread: 70 }); }
-                        if (wonAmount >= 1000) { fetch(WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: `🎰 **JACKPOT!** Gracz **${userBet.nick}** wylosował **${wonAmount} FC**!` }) }); }
+                        const targetNick = userBet ? userBet.nick : nick;
+                        if (wonAmount >= 1000) { fetch(WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: `🎰 **JACKPOT!** Gracz **${targetNick}** wylosował **${wonAmount} FC**!` }) }); }
                     }
                     setSpinResult(`WYLOSOWANO: ${wonAmount} FC`);
                     setIsSpinning(false);
@@ -1476,11 +1572,18 @@
                             <a href="#">Zrealizuj Kod</a>
                             <a href="#">PL</a>
                         </nav>
-                        <button className="btn-login">Zaloguj</button>
+                        {nick ? (
+                            <div className="header-user-info">
+                                <span className="header-user-nick">{nick.split('#')[0]}</span>
+                                <button onClick={handleLogout} className="btn-login" style={{borderColor: 'var(--grey)', color: 'var(--grey)'}}>Wyloguj</button>
+                            </div>
+                        ) : (
+                             DISCORD_CLIENT_ID !== 'YOUR_DISCORD_CLIENT_ID_HERE' && <a href={discordAuthUrl} className="btn-login">Zaloguj przez Discord</a>
+                        )}
                     </header>
 
                     {/* WALLET BAR (when logged in) */}
-                    {!showTerms && userBet && (
+                    {(userBet || nick) && !showTerms && (
                         <div className="wallet-badge">
                             <span className="wallet-label">Twój stan konta</span>
                             <span className="wallet-val">{userCurrentBalance} <span>FC</span></span>
@@ -1505,7 +1608,7 @@
                                     <div className="rule-item"><div className="rule-bullet"></div><p className="rule-text">Wygrywaj FC i <strong>wymieniaj na nagrody w Sklepie</strong>!</p></div>
                                     <div className="rule-item"><div className="rule-bullet"></div><p className="rule-text">W przerwach otwieraj <strong>Skrzynki w Kasynie</strong>.</p></div>
                                 </div>
-                                <button className="btn-primary" style={{maxWidth:'100%', fontSize:'16px', padding:'22px'}} onClick={() => { setShowTerms(false); showNotify(userBet ? "Witaj ponownie!" : "Powodzenia w typowaniu!"); }}>WCHODZĘ DO GRY</button>
+                                <button className="btn-primary" style={{maxWidth:'100%', fontSize:'16px', padding:'22px'}} onClick={() => { setShowTerms(false); showNotify(userBet || nick ? "Witaj ponownie!" : "Powodzenia w typowaniu!"); }}>WCHODZĘ DO GRY</button>
                             </div>
                         </div>
                     )}
@@ -1672,44 +1775,55 @@
 
                                 <div className="nick-input-wrap">
                                     <label className="nick-label">Twój Nick Discord</label>
-                                    <input required className="nick-input" placeholder="NICK#0000" value={nick} onChange={e => setNick(e.target.value.toUpperCase())} />
+                                    <input
+                                        required
+                                        className="nick-input"
+                                        placeholder="← ZALOGUJ SIĘ PRZEZ DISCORD"
+                                        value={nick}
+                                        readOnly={true}
+                                        style={{ cursor: 'default', background: nick ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.04)', fontSize: nick ? '22px' : '14px' }}
+                                    />
                                 </div>
 
-                                <div style={{marginBottom:'40px'}}>
-                                    {FIGHTS.map((f, idx) => {
-                                        const currentPick = picks[f.id];
-                                        return (
-                                            <div key={f.id} className="fight-card">
-                                                <div className="fight-card-header">
-                                                    <span className="fight-num">WALKA {String(idx+1).padStart(2,'0')}</span>
-                                                    <span className="fight-cat">{f.cat}</span>
-                                                </div>
-                                                <div style={{display:'grid', gridTemplateColumns:'1fr 40px 1fr'}}>
-                                                    <button type="button" className={`pick-btn ${currentPick?.fighter === f.p1 ? 'selected' : ''}`} onClick={() => handlePick(f.id, f.p1)}>
-                                                        {f.p1.toUpperCase()}
-                                                        {currentPick?.fighter === f.p1 && <span className="pick-badge">WYBRANO</span>}
-                                                    </button>
-                                                    <div className="vs-divider">VS</div>
-                                                    <button type="button" className={`pick-btn ${currentPick?.fighter === f.p2 ? 'selected' : ''}`} onClick={() => handlePick(f.id, f.p2)}>
-                                                        {f.p2.toUpperCase()}
-                                                        {currentPick?.fighter === f.p2 && <span className="pick-badge">WYBRANO</span>}
-                                                    </button>
-                                                </div>
-                                                {currentPick && (
-                                                    <div className="stake-area">
-                                                        <span className="stake-info">Stawka: <span className="stake-val">{currentPick.stake} FC</span></span>
-                                                        <input type="range" min="0" max={remainingBalance + currentPick.stake} step="10" value={currentPick.stake} onChange={e => setPicks(prev => ({...prev, [f.id]: {...prev[f.id], stake: parseInt(e.target.value)}}))} className="fc-slider" />
-                                                        <span className="stake-info">+<span className="stake-win">{currentPick.stake*2} FC</span></span>
+                                { nick && (
+                                <div>
+                                    <div style={{marginBottom:'40px'}}>
+                                        {FIGHTS.map((f, idx) => {
+                                            const currentPick = picks[f.id];
+                                            return (
+                                                <div key={f.id} className="fight-card">
+                                                    <div className="fight-card-header">
+                                                        <span className="fight-num">WALKA {String(idx+1).padStart(2,'0')}</span>
+                                                        <span className="fight-cat">{f.cat}</span>
                                                     </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                                    <div style={{display:'grid', gridTemplateColumns:'1fr 40px 1fr'}}>
+                                                        <button type="button" className={`pick-btn ${currentPick?.fighter === f.p1 ? 'selected' : ''}`} onClick={() => handlePick(f.id, f.p1)}>
+                                                            {f.p1.toUpperCase()}
+                                                            {currentPick?.fighter === f.p1 && <span className="pick-badge">WYBRANO</span>}
+                                                        </button>
+                                                        <div className="vs-divider">VS</div>
+                                                        <button type="button" className={`pick-btn ${currentPick?.fighter === f.p2 ? 'selected' : ''}`} onClick={() => handlePick(f.id, f.p2)}>
+                                                            {f.p2.toUpperCase()}
+                                                            {currentPick?.fighter === f.p2 && <span className="pick-badge">WYBRANO</span>}
+                                                        </button>
+                                                    </div>
+                                                    {currentPick && (
+                                                        <div className="stake-area">
+                                                            <span className="stake-info">Stawka: <span className="stake-val">{currentPick.stake} FC</span></span>
+                                                            <input type="range" min="0" max={remainingBalance + currentPick.stake} step="10" value={currentPick.stake} onChange={e => setPicks(prev => ({...prev, [f.id]: {...prev[f.id], stake: parseInt(e.target.value)}}))} className="fc-slider" />
+                                                            <span className="stake-info">+<span className="stake-win">{currentPick.stake*2} FC</span></span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
 
-                                <button type="submit" disabled={status==='loading'} className="btn-primary" style={{maxWidth:'100%', fontSize:'18px', padding:'24px', letterSpacing:'0.3em', opacity: status==='loading' ? 0.6 : 1}}>
-                                    {status === 'loading' ? 'WYSYŁANIE...' : 'ZATWIERDŹ KUPON'}
-                                </button>
+                                    <button type="submit" disabled={status==='loading'} className="btn-primary" style={{maxWidth:'100%', fontSize:'18px', padding:'24px', letterSpacing:'0.3em', opacity: status==='loading' ? 0.6 : 1}}>
+                                        {status === 'loading' ? 'WYSYŁANIE...' : 'ZATWIERDŹ KUPON'}
+                                    </button>
+                                </div>
+                                )}
                             </form>
                         )}
 
