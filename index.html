@@ -281,6 +281,7 @@
         }
 
         .btn-primary:hover { background: #C8001F; }
+        .btn-primary:disabled { background: var(--grey); cursor: not-allowed; }
 
         .btn-secondary {
             display: block;
@@ -805,6 +806,16 @@
             text-transform: uppercase;
             cursor: pointer;
             transition: all 0.2s;
+        }
+        
+        .casino-open-btn:disabled {
+            border-color: rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.2);
+            cursor: not-allowed;
+        }
+        
+        .casino-open-btn:disabled:hover {
+            background: transparent;
         }
 
         .casino-open-btn:hover {
@@ -1445,13 +1456,17 @@
             
             const modifyDatabaseWallet = async (amount) => {
                 const targetNick = userBet ? userBet.nick : nick;
-                if (!targetNick) return;
+                if (!targetNick) return false;
                 const userDbObj = allBets.find(b => b.nick === targetNick);
                 if (userDbObj && userDbObj.id) {
                     const currentMod = userDbObj.walletModifier || 0;
                     await db.ref(`wszystkie_kupony/${userDbObj.id}/walletModifier`).set(currentMod + amount);
                     return true;
                 } else {
+                     if(!userBet){
+                        showNotify(t('pleaseLogin'));
+                        return false;
+                     }
                     showNotify(t('connectionError'));
                     return false;
                 }
@@ -1502,6 +1517,7 @@
                 for (let i = 0; i < count; i++) {
                     const newCode = Math.random().toString(36).substring(2, 10).toUpperCase();
                     updates[newCode] = { amount, used: false };
+                    generatedCodes.push(newCode);
                 }
 
                 try {
@@ -1610,8 +1626,39 @@
                 { q: { pl: 'Co się stanie, jeśli nie obstawię wszystkich walk?', en: 'What if I don\'t bet on all fights?' }, a: { pl: 'System nie pozwoli Ci zatwierdzić kuponu, dopóki nie wybierzesz swojego typu dla każdej walki z karty. Musisz obstawić wszystkie pojedynki.', en: 'The system will not allow you to confirm your ticket until you have made a selection for every fight on the card. You must bet on all matches.' } }
             ];
             
-            const handleBuyStoreItem = async (itemName, cost) => { /* ... (same logic) ... */ };
-            const openCase = async (caseName, cost, drops) => { /* ... (same logic) ... */ };
+            const handleBuyStoreItem = async (itemName, cost) => {
+                if (userCurrentBalance < cost) return showNotify(t("notEnoughFc"));
+                if (confirm(`${t('confirmPurchase')} ${itemName} za ${cost} FC?`)) {
+                    await modifyDatabaseWallet(-cost);
+                    showNotify(`${t('boughtItem')}: ${itemName}! ${t('reportToDiscord')}.`);
+                    const targetNick = userBet ? userBet.nick : nick;
+                    fetch(WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: "FAME STORE", content: `🛒 **${targetNick}** ${t('boughtItem')}: **${itemName}** za ${cost} FC!` }) });
+                }
+            };
+
+            const openCase = async (caseName, cost, drops) => {
+                if (isSpinning) return;
+                if (userCurrentBalance < cost) return showNotify(t("notEnoughFc"));
+                setSpinResult(null);
+                setIsSpinning(true);
+                await modifyDatabaseWallet(-cost);
+                setTimeout(async () => {
+                    const rand = Math.random();
+                    let wonAmount = 0, cumProb = 0;
+                    for (const drop of drops) {
+                        cumProb += drop.chance;
+                        if (rand <= cumProb) { wonAmount = drop.amount; break; }
+                    }
+                    if (wonAmount > 0) {
+                        await modifyDatabaseWallet(wonAmount);
+                        if (wonAmount >= cost * 2) { confetti({ particleCount: 100, spread: 70 }); }
+                        const targetNick = userBet ? userBet.nick : nick;
+                        if (wonAmount >= 1000) { fetch(WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: `🎰 **${t('jackpot')}** Gracz **${targetNick}** ${t('jackpotMsg')} **${wonAmount} FC**!` }) }); }
+                    }
+                    setSpinResult(`${t('spinResult')}: ${wonAmount} FC`);
+                    setIsSpinning(false);
+                }, 3000);
+            };
 
             // ---- ADMIN VIEW ----
             if (view === 'admin') {
@@ -1639,14 +1686,57 @@
                                     </button>
                                 </div>
                                 {/* Results */}
-                                {/* ... Results section JSX ... */}
-
+                                <div style={{marginBottom:'32px'}}>
+                                    <p style={{fontFamily:'Barlow Condensed', fontSize:'10px', fontWeight:700, letterSpacing:'0.35em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)', marginBottom:'16px'}}>{t('fightResults')}</p>
+                                    <div style={{maxHeight:'50vh', overflowY:'auto'}}>
+                                        {FIGHTS.map(f => {
+                                            const stats = getFightStats(f.id);
+                                            return (
+                                                <div key={f.id} style={{borderBottom:'1px solid rgba(255,255,255,0.06)', paddingBottom:'16px', marginBottom:'16px'}}>
+                                                    <div style={{display:'flex', justifyContent:'space-between', marginBottom:'10px'}}>
+                                                        <span style={{fontFamily:'Barlow Condensed', fontSize:'12px', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)'}}>{f.cat}</span>
+                                                        <span style={{fontFamily:'Barlow Condensed', fontSize:'11px', fontWeight:700, color:'rgba(255,255,255,0.25)'}}>{t('votes')}: {stats.total}</span>
+                                                    </div>
+                                                    <div style={{display:'grid', gridTemplateColumns:'1fr auto 1fr', gap:'8px'}}>
+                                                        {[f.p1, f.p2].map((p, idx) => (
+                                                            <button key={p} onClick={() => db.ref('official_results/' + f.id).set(p)} style={{padding:'14px 8px', background: officialResults[f.id] === p ? '#E8002A' : 'rgba(255,255,255,0.03)', border: `1px solid ${officialResults[f.id] === p ? '#E8002A' : 'rgba(255,255,255,0.1)'}`, color: officialResults[f.id] === p ? 'white' : 'rgba(255,255,255,0.5)', fontFamily:'Barlow Condensed', fontWeight:900, fontSize:'12px', textTransform:'uppercase', letterSpacing:'0.05em', cursor:'pointer'}}>
+                                                                {p}<br/><span style={{fontSize:'10px', opacity:0.6}}>{idx === 0 ? stats.p1 : stats.p2}%</span>
+                                                            </button>
+                                                        ))}
+                                                        <button onClick={() => db.ref('official_results/' + f.id).set('REMIS')} style={{padding:'14px 8px', background: officialResults[f.id] === 'REMIS' ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.03)', border: `1px solid ${officialResults[f.id] === 'REMIS' ? 'white' : 'rgba(255,255,255,0.1)'}`, color: officialResults[f.id] === 'REMIS' ? 'white' : 'rgba(255,255,255,0.35)', fontFamily:'Barlow Condensed', fontWeight:900, fontSize:'12px', textTransform:'uppercase', cursor:'pointer'}}>REMIS</button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                                 {/* Users */}
-                                {/* ... Users section JSX ... */}
-
+                                <div style={{marginBottom:'32px'}}>
+                                    <p style={{fontFamily:'Barlow Condensed', fontSize:'10px', fontWeight:700, letterSpacing:'0.35em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)', marginBottom:'16px'}}>{t('tickets')} ({allBets.length})</p>
+                                    <div style={{maxHeight:'30vh', overflowY:'auto'}}>
+                                        {allBets.map(bet => (
+                                            <div key={bet.id} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 16px', borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                                                <div>
+                                                    <p style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:'15px', textTransform:'uppercase', color:'white'}}>{bet.nick}</p>
+                                                    <p style={{fontSize:'11px', color:'rgba(255,255,255,0.25)'}}>{new Date(bet.data).toLocaleString()}</p>
+                                                </div>
+                                                <button onClick={() => { if(confirm(`${t('deleteTicketConfirm')} ${bet.nick}?`)) db.ref('wszystkie_kupony/' + bet.id).remove(); }} style={{background:'rgba(232,0,42,0.1)', border:'1px solid rgba(232,0,42,0.3)', color:'#E8002A', padding:'8px 16px', fontFamily:'Barlow Condensed', fontWeight:900, fontSize:'11px', textTransform:'uppercase', cursor:'pointer'}}>{t('delete')}</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                                 {/* Bank */}
-                                {/* ... Bank section JSX ... */}
-
+                                <div style={{marginBottom:'40px'}}>
+                                    <p style={{fontFamily:'Barlow Condensed', fontSize:'10px', fontWeight:700, letterSpacing:'0.35em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)', marginBottom:'16px'}}>{t('centralBank')}</p>
+                                    <select className="admin-input" value={adminSelectedUser} onChange={e => setAdminSelectedUser(e.target.value)} style={{fontFamily:'Barlow Condensed', textTransform:'uppercase', fontSize:'14px'}}>
+                                        <option value="">{t('choosePlayer')}</option>
+                                        {allBets.map(bet => <option key={bet.id} value={bet.id}>{bet.nick}</option>)}
+                                    </select>
+                                    <div style={{display:'flex', gap:'12px'}}>
+                                        <input type="number" placeholder={t('fcAmountPlaceholder')} className="admin-input" value={adminFcAmount} onChange={e => setAdminFcAmount(e.target.value)} style={{flex:1, marginBottom:0}} />
+                                        <button onClick={handleAdminAddFC} className="btn-primary" style={{maxWidth:'120px', marginBottom:0}}>{t('execute')}</button>
+                                    </div>
+                                </div>
                                 {/* Promo Codes */}
                                 <div style={{marginBottom:'40px'}}>
                                     <p style={{fontFamily:'Barlow Condensed', fontSize:'10px', fontWeight:700, letterSpacing:'0.35em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)', marginBottom:'16px'}}>{t('promoCodes')}</p>
@@ -1738,7 +1828,7 @@
                                 <button onClick={handleLogout} className="btn-login" style={{borderColor: 'var(--grey)', color: 'var(--grey)'}}>{t('logout')}</button>
                             </div>
                         ) : (
-                             DISCORD_CLIENT_ID !== 'YOUR_DISCORD_CLIENT_ID_HERE' && <a href={discordAuthUrl} className="btn-login">{t('loginWithDiscord')}</a>
+                             <a href={discordAuthUrl} className="btn-login">{t('loginWithDiscord')}</a>
                         )}
                     </header>
 
@@ -1803,9 +1893,116 @@
                                     <button className={`tab-btn ${currentTab === 'store' ? 'active' : ''}`} onClick={() => setCurrentTab('store')}>{t('shop')}</button>
                                     <button className={`tab-btn ${currentTab === 'cases' ? 'active' : ''}`} onClick={() => setCurrentTab('cases')}>{t('casino')}</button>
                                 </div>
-                                {currentTab === 'ticket' && ( <div>{/* ... Ticket View JSX */}</div> )}
-                                {currentTab === 'store' && ( <div>{/* ... Store View JSX */}</div> )}
-                                {currentTab === 'cases' && ( <div>{/* ... Casino View JSX */}</div> )}
+                                {currentTab === 'ticket' && (
+                                    <div>
+                                        <div className="balance-hero">
+                                            <p className="balance-label">{t('yourBalance')}</p>
+                                            <p className="balance-num">{userCurrentBalance}</p>
+                                            <p className="balance-currency">{t('famecoins')}</p>
+                                            <p style={{marginTop:'16px', fontFamily:'Barlow Condensed', fontSize:'12px', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'rgba(255,255,255,0.25)'}}>
+                                                <span className="waiting-dot"></span>{t('waitingForResults')}
+                                            </p>
+                                        </div>
+
+                                        <div className="ticket">
+                                            <div className="ticket-header">
+                                                <div>
+                                                    <p className="ticket-title">{t('ticketHeader')}</p>
+                                                    <p className="ticket-nick">{userBet.nick}</p>
+                                                </div>
+                                                <div style={{textAlign:'right'}}>
+                                                    <p style={{fontFamily:'Barlow Condensed', fontSize:'11px', fontWeight:700, letterSpacing:'0.2em', color:'rgba(255,255,255,0.25)', textTransform:'uppercase'}}>{t('saved')}</p>
+                                                    <p style={{fontFamily:'Barlow Condensed', fontSize:'12px', fontWeight:700, color:'rgba(255,255,255,0.4)'}}>{userBet.date}</p>
+                                                </div>
+                                            </div>
+
+                                            {FIGHTS.map(f => {
+                                                const res = officialResults[f.id];
+                                                const userPick = userBet.picks[f.id];
+                                                const fighterName = userPick?.fighter || userPick;
+                                                const stake = userPick?.stake || 0;
+                                                let cls = 'pending';
+                                                if (res) { cls = res === fighterName ? 'win' : res === 'REMIS' ? 'draw' : 'lose'; }
+
+                                                return (
+                                                    <div key={f.id} className="ticket-row">
+                                                        <span className="ticket-cat">{f.cat}</span>
+                                                        <div style={{textAlign:'right'}}>
+                                                            <p className={`ticket-pick ${cls}`}>{fighterName}</p>
+                                                            <p className="ticket-stake">{t('stake')}: {stake} FC · {t('win')}: +{stake*2} FC</p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                                {currentTab === 'store' && (
+                                    <div>
+                                        <p className="section-title">{t('shopTitle')}</p>
+                                        <p className="section-subtitle">{t('shopSub')}</p>
+                                        <div className="store-grid">
+                                            <div className="store-card">
+                                                <span className="store-icon">🎟️</span>
+                                                <p className="store-name">Kupon FAME 32</p>
+                                                <p className="store-desc">Darmowy dostęp do restreamu z kolejnej gali.</p>
+                                                <button className="store-buy-btn" onClick={() => handleBuyStoreItem('KUPON FAME 32', 5000)}>Kup za 5000 FC</button>
+                                            </div>
+                                            <div className="store-card">
+                                                <span className="store-icon">🟣</span>
+                                                <p className="store-name">Ranga VIP</p>
+                                                <p className="store-desc">Unikalna ranga VIP na serwerze Discord.</p>
+                                                <button className="store-buy-btn purple" onClick={() => handleBuyStoreItem('RANGA VIP DISCORD', 2500)}>Kup za 2500 FC</button>
+                                            </div>
+                                            <div className="store-card">
+                                                <span className="store-icon">🎨</span>
+                                                <p className="store-name">Kolor Nicku</p>
+                                                <p className="store-desc">Własny kolor nicku na Discordzie.</p>
+                                                <button className="store-buy-btn blue" onClick={() => handleBuyStoreItem('KOLOR NICKU', 1000)}>Kup za 1000 FC</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                {currentTab === 'cases' && (
+                                    <div>
+                                        <p className="section-title" style={{color:'#E8002A'}}>{t('casinoTitle')}</p>
+                                        <p className="section-subtitle">{t('casinoSub')}</p>
+
+                                        {spinResult && (
+                                            <div className="spin-result">
+                                                <p className="spin-result-txt">{spinResult}</p>
+                                            </div>
+                                        )}
+
+                                        <div className="casino-grid">
+                                            <div className="casino-card">
+                                                <span className={`casino-icon ${isSpinning ? 'spinning-icon' : ''}`}>📦</span>
+                                                <p className="casino-name">Biedaka</p>
+                                                <p className="casino-max">Max Drop: 1000 FC</p>
+                                                <button className="casino-open-btn" disabled={isSpinning} onClick={() => openCase('Biedaka', 350, [{chance:0.5, amount:0}, {chance:0.3, amount:200}, {chance:0.15, amount:400}, {chance:0.05, amount:1000}])}>
+                                                    {t('open')} (350 FC)
+                                                </button>
+                                            </div>
+                                            <div className="casino-card">
+                                                <span className={`casino-icon ${isSpinning ? 'spinning-icon' : ''}`}>🧰</span>
+                                                <p className="casino-name">Gracza</p>
+                                                <p className="casino-max">Max Drop: 2000 FC</p>
+                                                <button className="casino-open-btn" disabled={isSpinning} onClick={() => openCase('Gracza', 500, [{chance:0.5, amount:0}, {chance:0.25, amount:300}, {chance:0.20, amount:800}, {chance:0.05, amount:2000}])}>
+                                                    {t('open')} (500 FC)
+                                                </button>
+                                            </div>
+                                            <div className="casino-card gold-card">
+                                                <div className="jackpot-badge">{t('jackpot')}</div>
+                                                <span className={`casino-icon ${isSpinning ? 'spinning-icon' : ''}`} style={{marginTop:'16px'}}>👑</span>
+                                                <p className="casino-name" style={{color:'#D4A820'}}>Złota Premium</p>
+                                                <p className="casino-max" style={{color:'rgba(212,168,32,0.5)'}}>Max Drop: 5000 FC</p>
+                                                <button className="casino-open-btn gold-btn" disabled={isSpinning} onClick={() => openCase('Złota', 1000, [{chance:0.55, amount:0}, {chance:0.25, amount:500}, {chance:0.15, amount:2000}, {chance:0.05, amount:5000}])}>
+                                                    {t('open')} (1000 FC)
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                              </div>
                          ) : isBettingLocked ? (
                              <div className="locked-box">
@@ -1813,7 +2010,62 @@
                                 <p className="locked-sub">{t('bettingsFinishedSub')}</p>
                             </div>
                          ) : (
-                             <form onSubmit={submitBets}>{/* ... Betting Form JSX ... */}</form>
+                             <form onSubmit={submitBets}>
+                                <p className="section-title">{t('betFights')}</p>
+                                <p className="section-subtitle">{t('betSubtitle')}: {remainingBalance} FC</p>
+
+                                <div className="nick-input-wrap">
+                                    <label className="nick-label">{t('yourDiscordNick')}</label>
+                                    <input
+                                        required
+                                        className="nick-input"
+                                        placeholder={t('pleaseLogin')}
+                                        value={nick}
+                                        readOnly={true}
+                                        style={{ cursor: 'default', background: nick ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.04)', fontSize: nick ? '22px' : '14px' }}
+                                    />
+                                </div>
+
+                                { nick && (
+                                <div>
+                                    <div style={{marginBottom:'40px'}}>
+                                        {FIGHTS.map((f, idx) => {
+                                            const currentPick = picks[f.id];
+                                            return (
+                                                <div key={f.id} className="fight-card">
+                                                    <div className="fight-card-header">
+                                                        <span className="fight-num">{t('fight')} {String(idx+1).padStart(2,'0')}</span>
+                                                        <span className="fight-cat">{f.cat}</span>
+                                                    </div>
+                                                    <div style={{display:'grid', gridTemplateColumns:'1fr 40px 1fr'}}>
+                                                        <button type="button" className={`pick-btn ${currentPick?.fighter === f.p1 ? 'selected' : ''}`} onClick={() => handlePick(f.id, f.p1)}>
+                                                            {f.p1.toUpperCase()}
+                                                            {currentPick?.fighter === f.p1 && <span className="pick-badge">{t('chosen')}</span>}
+                                                        </button>
+                                                        <div className="vs-divider">VS</div>
+                                                        <button type="button" className={`pick-btn ${currentPick?.fighter === f.p2 ? 'selected' : ''}`} onClick={() => handlePick(f.id, f.p2)}>
+                                                            {f.p2.toUpperCase()}
+                                                            {currentPick?.fighter === f.p2 && <span className="pick-badge">{t('chosen')}</span>}
+                                                        </button>
+                                                    </div>
+                                                    {currentPick && (
+                                                        <div className="stake-area">
+                                                            <span className="stake-info">{t('stake')}: <span className="stake-val">{currentPick.stake} FC</span></span>
+                                                            <input type="range" min="0" max={remainingBalance + (currentPick.stake || 0)} step="10" value={currentPick.stake || 0} onChange={e => setPicks(prev => ({...prev, [f.id]: {...prev[f.id], stake: parseInt(e.target.value)}}))} className="fc-slider" />
+                                                            <span className="stake-info">+{t('win')}: <span className="stake-win">{currentPick.stake*2} FC</span></span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <button type="submit" disabled={status==='loading'} className="btn-primary" style={{maxWidth:'100%', fontSize:'18px', padding:'24px', letterSpacing:'0.3em'}}>
+                                        {status === 'loading' ? t('sending') : t('submitBet')}
+                                    </button>
+                                </div>
+                                )}
+                            </form>
                          )}
                          
                          {/* LEADERBOARD */}
