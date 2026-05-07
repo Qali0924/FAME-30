@@ -1457,17 +1457,21 @@
             const modifyDatabaseWallet = async (amount) => {
                 const targetNick = userBet ? userBet.nick : nick;
                 if (!targetNick) return false;
+                
+                // If the user has a bet, modify their wallet.
                 const userDbObj = allBets.find(b => b.nick === targetNick);
                 if (userDbObj && userDbObj.id) {
                     const currentMod = userDbObj.walletModifier || 0;
                     await db.ref(`wszystkie_kupony/${userDbObj.id}/walletModifier`).set(currentMod + amount);
                     return true;
+                } else if (nick && !userBet) {
+                    // This is a new user who hasn't placed a bet yet. We need to create a temporary entry for them.
+                    // This is a simplified approach. A more robust system would use Discord User ID as the key.
+                    const tempRef = db.ref('wszystkie_kupony').push();
+                    await tempRef.set({ nick: nick, walletModifier: amount, data: new Date().toISOString(), typy: {} });
+                    return true;
                 } else {
-                     if(!userBet){
-                        showNotify(t('pleaseLogin'));
-                        return false;
-                     }
-                    showNotify(t('connectionError'));
+                     showNotify(t('connectionError'));
                     return false;
                 }
             };
@@ -1512,17 +1516,15 @@
                 const count = parseInt(adminCodeCount);
                 if (isNaN(amount) || isNaN(count) || amount <= 0 || count <= 0) return alert('Podaj poprawne wartości!');
                 
-                const generatedCodes = [];
                 let updates = {};
                 for (let i = 0; i < count; i++) {
-                    const newCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+                    const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
                     updates[newCode] = { amount, used: false };
-                    generatedCodes.push(newCode);
                 }
 
                 try {
                     await db.ref('promo_codes').update(updates);
-                    alert(`Wygenerowano ${count} kodów:\n${generatedCodes.join('\n')}`);
+                    alert(`Wygenerowano ${count} kodów.`);
                 } catch (e) {
                     alert('Błąd podczas generowania kodów.');
                 }
@@ -1532,9 +1534,20 @@
                 e.preventDefault();
                 if (!nick) return alert(t('pleaseLogin'));
                 if (Object.keys(picks).length < FIGHTS.length) return alert(t('betAll'));
+                
                 setStatus('loading');
+
+                const existingBet = allBets.find(b => b.nick === nick);
+                
                 try {
-                    await db.ref('wszystkie_kupony').push({ nick, typy: picks, data: new Date().toISOString(), walletModifier: 0 });
+                    if (existingBet && Object.keys(existingBet.typy).length === 0) {
+                        // User exists from redeeming a code but has no bet, so update their entry
+                        await db.ref(`wszystkie_kupony/${existingBet.id}`).update({ typy: picks });
+                    } else {
+                        // New user places a bet
+                        await db.ref('wszystkie_kupony').push({ nick, typy: picks, data: new Date().toISOString(), walletModifier: 0 });
+                    }
+
                     const betData = { nick, picks, date: new Date().toLocaleString(lang) };
                     localStorage.setItem('fame_bet_30', JSON.stringify(betData));
                     setUserBet(betData);
@@ -1542,6 +1555,9 @@
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                 } catch(e) { alert(t('connectionError')); setStatus('idle'); }
             };
+            
+            // !! THIS IS THE CORRECTED LINE !!
+            const remainingBalance = 1000 - Object.values(picks).reduce((sum, p) => sum + (p.stake || 0), 0);
 
             const userCurrentBalance = useMemo(() => {
                 const targetNick = userBet ? userBet.nick : nick;
@@ -1549,7 +1565,7 @@
                 let bal = 1000;
                 const betObj = userBet || allBets.find(b => b.nick === targetNick);
 
-                if (betObj && betObj.picks) {
+                if (betObj && betObj.picks) { // From userBet state after submitting
                      Object.entries(betObj.picks).forEach(([fId, pickData]) => {
                         const stake = pickData.stake || 0;
                         const fighter = pickData.fighter || pickData;
@@ -1557,7 +1573,7 @@
                         if (officialResults[fId] === fighter) bal += (stake * 2);
                         else if (officialResults[fId] === 'REMIS') bal += stake;
                     });
-                } else if(betObj && betObj.typy) {
+                } else if(betObj && betObj.typy) { // From allBets loaded from DB
                     Object.entries(betObj.typy).forEach(([fId, pickData]) => {
                         const stake = pickData.stake || 0;
                         const fighter = pickData.fighter || pickData;
@@ -1697,13 +1713,14 @@
                                                         <span style={{fontFamily:'Barlow Condensed', fontSize:'12px', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)'}}>{f.cat}</span>
                                                         <span style={{fontFamily:'Barlow Condensed', fontSize:'11px', fontWeight:700, color:'rgba(255,255,255,0.25)'}}>{t('votes')}: {stats.total}</span>
                                                     </div>
-                                                    <div style={{display:'grid', gridTemplateColumns:'1fr auto 1fr', gap:'8px'}}>
-                                                        {[f.p1, f.p2].map((p, idx) => (
-                                                            <button key={p} onClick={() => db.ref('official_results/' + f.id).set(p)} style={{padding:'14px 8px', background: officialResults[f.id] === p ? '#E8002A' : 'rgba(255,255,255,0.03)', border: `1px solid ${officialResults[f.id] === p ? '#E8002A' : 'rgba(255,255,255,0.1)'}`, color: officialResults[f.id] === p ? 'white' : 'rgba(255,255,255,0.5)', fontFamily:'Barlow Condensed', fontWeight:900, fontSize:'12px', textTransform:'uppercase', letterSpacing:'0.05em', cursor:'pointer'}}>
-                                                                {p}<br/><span style={{fontSize:'10px', opacity:0.6}}>{idx === 0 ? stats.p1 : stats.p2}%</span>
-                                                            </button>
-                                                        ))}
-                                                        <button onClick={() => db.ref('official_results/' + f.id).set('REMIS')} style={{padding:'14px 8px', background: officialResults[f.id] === 'REMIS' ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.03)', border: `1px solid ${officialResults[f.id] === 'REMIS' ? 'white' : 'rgba(255,255,255,0.1)'}`, color: officialResults[f.id] === 'REMIS' ? 'white' : 'rgba(255,255,255,0.35)', fontFamily:'Barlow Condensed', fontWeight:900, fontSize:'12px', textTransform:'uppercase', cursor:'pointer'}}>REMIS</button>
+                                                    <div style={{display:'grid', gridTemplateColumns:'1fr 1fr auto', gap:'8px'}}>
+                                                        <button key={f.p1} onClick={() => db.ref('official_results/' + f.id).set(f.p1)} style={{padding:'14px 8px', background: officialResults[f.id] === f.p1 ? '#E8002A' : 'rgba(255,255,255,0.03)', border: `1px solid ${officialResults[f.id] === f.p1 ? '#E8002A' : 'rgba(255,255,255,0.1)'}`, color: 'white', fontFamily:'Barlow Condensed', fontWeight:900, fontSize:'12px', textTransform:'uppercase', letterSpacing:'0.05em', cursor:'pointer'}}>
+                                                                {f.p1}<br/><span style={{fontSize:'10px', opacity:0.6}}>{stats.p1}%</span>
+                                                        </button>
+                                                        <button key={f.p2} onClick={() => db.ref('official_results/' + f.id).set(f.p2)} style={{padding:'14px 8px', background: officialResults[f.id] === f.p2 ? '#E8002A' : 'rgba(255,255,255,0.03)', border: `1px solid ${officialResults[f.id] === f.p2 ? '#E8002A' : 'rgba(255,255,255,0.1)'}`, color: 'white', fontFamily:'Barlow Condensed', fontWeight:900, fontSize:'12px', textTransform:'uppercase', letterSpacing:'0.05em', cursor:'pointer'}}>
+                                                                {f.p2}<br/><span style={{fontSize:'10px', opacity:0.6}}>{stats.p2}%</span>
+                                                        </button>
+                                                        <button onClick={() => db.ref('official_results/' + f.id).set('REMIS')} style={{padding:'14px 8px', background: officialResults[f.id] === 'REMIS' ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.03)', border: `1px solid ${officialResults[f.id] === 'REMIS' ? 'white' : 'rgba(255,255,255,0.1)'}`, color: 'white', fontFamily:'Barlow Condensed', fontWeight:900, fontSize:'12px', textTransform:'uppercase', cursor:'pointer'}}>REMIS</button>
                                                     </div>
                                                 </div>
                                             );
@@ -1713,12 +1730,12 @@
                                 {/* Users */}
                                 <div style={{marginBottom:'32px'}}>
                                     <p style={{fontFamily:'Barlow Condensed', fontSize:'10px', fontWeight:700, letterSpacing:'0.35em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)', marginBottom:'16px'}}>{t('tickets')} ({allBets.length})</p>
-                                    <div style={{maxHeight:'30vh', overflowY:'auto'}}>
+                                    <div style={{maxHeight:'30vh', overflowY:'auto', border: '1px solid rgba(255,255,255,0.1)'}}>
                                         {allBets.map(bet => (
                                             <div key={bet.id} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 16px', borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
                                                 <div>
                                                     <p style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:'15px', textTransform:'uppercase', color:'white'}}>{bet.nick}</p>
-                                                    <p style={{fontSize:'11px', color:'rgba(255,255,255,0.25)'}}>{new Date(bet.data).toLocaleString()}</p>
+                                                    <p style={{fontSize:'11px', color:'rgba(255,255,255,0.25)'}}>{bet.data ? new Date(bet.data).toLocaleString() : '---'}</p>
                                                 </div>
                                                 <button onClick={() => { if(confirm(`${t('deleteTicketConfirm')} ${bet.nick}?`)) db.ref('wszystkie_kupony/' + bet.id).remove(); }} style={{background:'rgba(232,0,42,0.1)', border:'1px solid rgba(232,0,42,0.3)', color:'#E8002A', padding:'8px 16px', fontFamily:'Barlow Condensed', fontWeight:900, fontSize:'11px', textTransform:'uppercase', cursor:'pointer'}}>{t('delete')}</button>
                                             </div>
@@ -1753,7 +1770,7 @@
                                         <table className="admin-table">
                                             <thead><tr><th>{t('code')}</th><th>{t('value')}</th><th>{t('used')}</th><th>{t('usedBy')}</th><th></th></tr></thead>
                                             <tbody>
-                                                {Object.entries(promoCodes).sort(([,a],[,b]) => (a.usedAt || 0) < (b.usedAt || 0) ? 1 : -1).map(([code, data]) => (
+                                                {Object.entries(promoCodes).sort(([,a],[,b]) => (a.usedAt || "") < (b.usedAt || "") ? 1 : -1).map(([code, data]) => (
                                                     <tr key={code}>
                                                         <td className="code-col">{code}</td>
                                                         <td>{data.amount} FC</td>
@@ -1767,7 +1784,7 @@
                                     </div>
                                 </div>
                                 
-                                <div style={{display:'flex', gap:'12px'}}>
+                                <div style={{display:'flex', gap:'12px', marginTop: '40px'}}>
                                     <button onClick={() => { if(confirm(t('clearResultsConfirm'))) db.ref('official_results').remove(); }} style={{flex:1, padding:'16px', background:'transparent', border:'1px solid rgba(232,0,42,0.3)', color:'rgba(232,0,42,0.7)', fontFamily:'Barlow Condensed', fontWeight:900, fontSize:'13px', textTransform:'uppercase', letterSpacing:'0.15em', cursor:'pointer'}}>{t('clearResults')}</button>
                                     <button onClick={() => setView('home')} className="btn-primary" style={{flex:2, marginBottom:0}}>{t('goBack')}</button>
                                 </div>
@@ -2052,7 +2069,7 @@
                                                         <div className="stake-area">
                                                             <span className="stake-info">{t('stake')}: <span className="stake-val">{currentPick.stake} FC</span></span>
                                                             <input type="range" min="0" max={remainingBalance + (currentPick.stake || 0)} step="10" value={currentPick.stake || 0} onChange={e => setPicks(prev => ({...prev, [f.id]: {...prev[f.id], stake: parseInt(e.target.value)}}))} className="fc-slider" />
-                                                            <span className="stake-info">+{t('win')}: <span className="stake-win">{currentPick.stake*2} FC</span></span>
+                                                            <span className="stake-info">+ {t('win')}: <span className="stake-win">{currentPick.stake*2} FC</span></span>
                                                         </div>
                                                     )}
                                                 </div>
