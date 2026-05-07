@@ -1279,6 +1279,50 @@
             .intro-box { padding: 36px 24px; }
             .modal-content { padding: 32px 24px; }
         }
+                /* Przycisk Karta Walk (Lewy bok) */
+        .side-btn-karta {
+            position: fixed;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--red);
+            color: var(--white);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            font-size: 15px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            padding: 24px 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-left: none;
+            cursor: pointer;
+            z-index: 95;
+            transition: all 0.2s;
+            writing-mode: vertical-rl; /* Tekst w pionie */
+            text-orientation: mixed;
+        }
+        .side-btn-karta:hover {
+            background: #C8001F;
+            padding-right: 16px; /* Lekkie wysunięcie po najechaniu */
+        }
+
+        /* Modal z obrazkiem */
+        .img-modal-content {
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: none !important;
+        }
+        .img-modal-content img {
+            max-width: 100%;
+            max-height: 90vh;
+            object-fit: contain;
+            border: 2px solid var(--red);
+            box-shadow: 0 0 30px rgba(232,0,42,0.4);
+        }
     </style>
 </head>
 <body>
@@ -1341,6 +1385,7 @@
             // New States
             const [lang, setLang] = useState('pl');
             const [showFaqModal, setShowFaqModal] = useState(false);
+            const [showFightCardModal, setShowFightCardModal] = useState(false);
             const [showRedeemModal, setShowRedeemModal] = useState(false);
             const [openFaq, setOpenFaq] = useState(null);
             const [redeemCodeInput, setRedeemCodeInput] = useState('');
@@ -1422,8 +1467,8 @@
             }, []);
             
             useEffect(() => {
-                document.body.classList.toggle('modal-open', showFaqModal || showRedeemModal);
-            }, [showFaqModal, showRedeemModal]);
+                document.body.classList.toggle('modal-open', showFaqModal || showRedeemModal || showFightCardModal);
+            }, [showFaqModal, showRedeemModal, showFightCardModal]);
 
             const showNotify = (msg) => {
                 setToast({ show: true, msg });
@@ -1798,6 +1843,18 @@
             return (
                 <div>
                     {/* MODALS */}
+                                        {/* Boczny przycisk KARTA WALK */}
+                    <button className="side-btn-karta" onClick={() => setShowFightCardModal(true)}>
+                        KARTA WALK
+                    </button>
+
+                    {/* MODAL KARTA WALK */}
+                    <div className={`modal-overlay ${showFightCardModal ? 'visible' : ''}`} onClick={() => setShowFightCardModal(false)}>
+                        <div className="modal-content img-modal-content" onClick={e => e.stopPropagation()}>
+                            <button className="modal-close-btn" style={{top: '-40px', right: '0', color: 'white'}} onClick={() => setShowFightCardModal(false)}>&times;</button>
+                            <img src="karta.png" alt="Karta Walk" />
+                        </div>
+                    </div>
                     <div className={`modal-overlay ${showFaqModal ? 'visible' : ''}`} onClick={() => setShowFaqModal(false)}>
                         <div className="modal-content" onClick={e => e.stopPropagation()}>
                             <button className="modal-close-btn" onClick={() => setShowFaqModal(false)}>&times;</button>
