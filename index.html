@@ -1613,6 +1613,7 @@
                     setStatus('success');
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                 } catch(e) { alert(t('connectionError')); setStatus('idle'); }
+                 console.error("PEŁNY BŁĄD ZAPISU DO FIREBASE:", e); 
             };
             
             const remainingBalance = 1000 - Object.values(picks).reduce((sum, p) => sum + (p.stake || 0), 0);
