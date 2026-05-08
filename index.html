@@ -9,8 +9,8 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <!-- ZMIANA NA WERSJĘ 8 FIREBASE -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app-debug.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database-debug.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Barlow:wght@400;600;700;900&display=swap" rel="stylesheet">
 
@@ -1343,8 +1343,9 @@
             appId: "1:447768289074:web:49ce781e967ab86417812b"
         };
 
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    firebase.database.enableLogging(true); // <-- DODAJ TĘ LINIĘ!
+    const db = firebase.database();
         
         // --- START: Discord & App Config ---
         const DISCORD_CLIENT_ID = '1501661456700014763'; 
