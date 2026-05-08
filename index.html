@@ -1328,7 +1328,7 @@
 <body>
     <div id="root"></div>
 
-    <script type="text/babel">
+<script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
 
         const firebaseConfig = {
@@ -1353,7 +1353,7 @@
         const DEADLINE = new Date('2026-05-09T19:30:00');
         // --- END: Discord & App Config ---
 
-               const FIGHTS = [
+        const FIGHTS = [
             { id: 1, p1: 'ALANIK', p2: 'SCARFACE', cat: 'TURNIEJ ĆWIERĆFINAŁ' },
             { id: 2, p1: 'WIEWIÓR', p2: 'AKOP', cat: 'TURNIEJ ĆWIERĆFINAŁ' },
             { id: 3, p1: 'DON KASJO', p2: 'KARAŚ', cat: 'TURNIEJ ĆWIERĆFINAŁ' },
@@ -1487,6 +1487,19 @@
                 window.location.reload();
             };
 
+            // --- START: NAPRAWIONA FUNKCJA ---
+            const handlePick = (fightId, fighterName) => {
+                setPicks(prev => ({
+                    ...prev,
+                    [fightId]: {
+                        fighter: fighterName,
+                        // Zachowaj istniejącą stawkę, jeśli użytkownik tylko zmienia zawodnika, w przeciwnym razie ustaw na 0
+                        stake: prev[fightId]?.stake || 0 
+                    }
+                }));
+            };
+            // --- END: NAPRAWIONA FUNKCJA ---
+
             const handleAdminLogin = async () => {
                 const l = document.getElementById('l').value;
                 const p = document.getElementById('p').value;
@@ -1509,15 +1522,12 @@
                 const targetNick = userBet ? userBet.nick : nick;
                 if (!targetNick) return false;
                 
-                // If the user has a bet, modify their wallet.
                 const userDbObj = allBets.find(b => b.nick === targetNick);
                 if (userDbObj && userDbObj.id) {
                     const currentMod = userDbObj.walletModifier || 0;
                     await db.ref(`wszystkie_kupony/${userDbObj.id}/walletModifier`).set(currentMod + amount);
                     return true;
                 } else if (nick && !userBet) {
-                    // This is a new user who hasn't placed a bet yet. We need to create a temporary entry for them.
-                    // This is a simplified approach. A more robust system would use Discord User ID as the key.
                     const tempRef = db.ref('wszystkie_kupony').push();
                     await tempRef.set({ nick: nick, walletModifier: amount, data: new Date().toISOString(), typy: {} });
                     return true;
@@ -1592,10 +1602,8 @@
                 
                 try {
                     if (existingBet && Object.keys(existingBet.typy).length === 0) {
-                        // User exists from redeeming a code but has no bet, so update their entry
                         await db.ref(`wszystkie_kupony/${existingBet.id}`).update({ typy: picks });
                     } else {
-                        // New user places a bet
                         await db.ref('wszystkie_kupony').push({ nick, typy: picks, data: new Date().toISOString(), walletModifier: 0 });
                     }
 
@@ -1607,7 +1615,6 @@
                 } catch(e) { alert(t('connectionError')); setStatus('idle'); }
             };
             
-            // !! THIS IS THE CORRECTED LINE !!
             const remainingBalance = 1000 - Object.values(picks).reduce((sum, p) => sum + (p.stake || 0), 0);
 
             const userCurrentBalance = useMemo(() => {
@@ -1616,7 +1623,7 @@
                 let bal = 1000;
                 const betObj = userBet || allBets.find(b => b.nick === targetNick);
 
-                if (betObj && betObj.picks) { // From userBet state after submitting
+                if (betObj && betObj.picks) { 
                      Object.entries(betObj.picks).forEach(([fId, pickData]) => {
                         const stake = pickData.stake || 0;
                         const fighter = pickData.fighter || pickData;
@@ -1624,7 +1631,7 @@
                         if (officialResults[fId] === fighter) bal += (stake * 2);
                         else if (officialResults[fId] === 'REMIS') bal += stake;
                     });
-                } else if(betObj && betObj.typy) { // From allBets loaded from DB
+                } else if(betObj && betObj.typy) { 
                     Object.entries(betObj.typy).forEach(([fId, pickData]) => {
                         const stake = pickData.stake || 0;
                         const fighter = pickData.fighter || pickData;
@@ -1849,12 +1856,10 @@
             return (
                 <div>
                     {/* MODALS */}
-                                        {/* Boczny przycisk KARTA WALK */}
                     <button className="side-btn-karta" onClick={() => setShowFightCardModal(true)}>
                         KARTA WALK
                     </button>
 
-                    {/* MODAL KARTA WALK */}
                     <div className={`modal-overlay ${showFightCardModal ? 'visible' : ''}`} onClick={() => setShowFightCardModal(false)}>
                         <div className="modal-content img-modal-content" onClick={e => e.stopPropagation()}>
                             <button className="modal-close-btn" style={{top: '-40px', right: '0', color: 'white'}} onClick={() => setShowFightCardModal(false)}>&times;</button>
@@ -2176,6 +2181,6 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
-    </script>
+</script>
 </body>
 </html>
